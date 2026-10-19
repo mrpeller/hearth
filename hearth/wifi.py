@@ -1,20 +1,15 @@
 """Nearby Wi-Fi networks, for the Wi-Fi menu on the TV.
 
 The TV won't share its own scan, so the machine running Hearth scans instead (it's in
-the same home). macOS uses system_profiler; Linux uses NetworkManager's nmcli.
+the same home). macOS uses system_profiler, Linux NetworkManager's nmcli, Windows netsh.
 """
-import subprocess
 import threading
 import time
 
 from . import network
 
 
-def _run(cmd, timeout=30):
-    try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
+_run = network.run
 
 
 def parse_system_profiler(out):
@@ -72,9 +67,54 @@ def parse_nmcli(out):
     return current, list(nearby.values())
 
 
+def _netsh_fields(out):
+    """Yield (key, value) pairs from netsh's "Key   : value" lines."""
+    for line in out.splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            yield k.strip(), v.strip()
+
+
+def _band_from_channel(channel):
+    try:
+        return "2.4 GHz" if int(channel) <= 14 else "5 GHz"
+    except ValueError:
+        return ""
+
+
+def parse_netsh(interfaces_out, networks_out):
+    """(current, nearby) from `netsh wlan show interfaces` and `netsh wlan show networks mode=bssid`."""
+    current = next((v for k, v in _netsh_fields(interfaces_out) if k == "SSID"), "")
+    nearby, entry = [], None
+    for k, v in _netsh_fields(networks_out):
+        if k.startswith("SSID ") and not k.startswith("SSID BSSID"):
+            entry = {"ssid": v} if v else None
+            if entry:
+                nearby.append(entry)
+        elif entry is None:
+            continue
+        elif k == "Authentication":
+            entry["security"] = "None" if v.lower() == "open" else v
+        elif k == "Band" and "band" not in entry:
+            entry["band"] = v.replace("GHz", " GHz").replace("  ", " ")
+        elif k == "Channel" and "band" not in entry:
+            entry["band"] = _band_from_channel(v)
+        elif k == "Signal" and v.endswith("%") and "signal" not in entry:
+            entry["signal_pct"] = int(v[:-1] or 0)
+    return current, nearby
+
+
 def scan():
     """{"ssid": current, "nearby": [...]} for this machine's Wi-Fi."""
-    if network.is_linux():
+    os_name = network.system()
+    if os_name == "Windows":
+        # Windows 11 24H2+ only lists nearby networks if Location services are on; otherwise just the current one.
+        current, nearby = parse_netsh(_run(["netsh", "wlan", "show", "interfaces"]),
+                                      _run(["netsh", "wlan", "show", "networks", "mode=bssid"]))
+        if current and not any(n["ssid"] == current for n in nearby):
+            nearby.insert(0, {"ssid": current})
+        saved = {v for k, v in _netsh_fields(_run(["netsh", "wlan", "show", "profiles"])) if k == "All User Profile"}
+    elif os_name == "Linux":
         current, nearby = parse_nmcli(_run(["nmcli", "-t", "-f", "IN-USE,SSID,SECURITY,FREQ,SIGNAL", "device", "wifi", "list"]))
         saved = {line.split(":")[0] for line in _run(["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"]).splitlines()
                  if line.endswith(":802-11-wireless")}

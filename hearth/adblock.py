@@ -99,7 +99,10 @@ class AdBlocker:
             return
         reply = self._forward(packet)
         if reply:
-            sock.sendto(reply, addr)
+            try:
+                sock.sendto(reply, addr)
+            except OSError:
+                pass
 
     def _serve(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -112,7 +115,10 @@ class AdBlocker:
         self.running = True
         print(f"Ad blocker listening on port {self.port} ({len(self.block):,} domains)", flush=True)
         while True:
-            packet, addr = sock.recvfrom(4096)
+            try:
+                packet, addr = sock.recvfrom(4096)
+            except OSError:   # e.g. Windows' WSAECONNRESET after an unreachable client; not fatal
+                continue
             threading.Thread(target=self._handle, args=(sock, packet, addr), daemon=True).start()
 
     def start(self):

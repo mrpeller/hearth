@@ -42,6 +42,9 @@ DEFAULTS = {
     # Replace VIDAA's launcher with Hearth whenever it appears.
     "own_home": True,
     "http_port": 8765,
+    # Pull new versions from GitHub (when this folder is a git clone) and restart.
+    "auto_update": True,
+    "update_minutes": 5,
     # Network ad blocker (DNS). Port 53 needs extra permission on Linux; see README.
     "adblock": True,          # run the DNS server at all
     "adblock_on": True,       # blocking switched on (the remote's switch pauses it)

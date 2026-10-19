@@ -79,6 +79,59 @@ class WifiParseTest(unittest.TestCase):
         self.assertEqual(next(n for n in nearby if n["ssid"] == "Cafe")["band"], "2.4 GHz")
 
 
+class NetshParseTest(unittest.TestCase):
+    INTERFACES = """
+There is 1 interface on the system:
+
+    Name                   : Wi-Fi
+    Description            : Intel(R) Wi-Fi 6 AX201 160MHz
+    State                  : connected
+    SSID                   : Home 5G
+    BSSID                  : 98:a9:42:a6:1e:f8
+    Radio type             : 802.11ax
+    Authentication         : WPA2-Personal
+    Band                   : 5 GHz
+    Channel                : 149
+    Signal                 : 99%
+"""
+    NETWORKS = """
+Interface name : Wi-Fi
+There are 3 networks currently visible.
+
+SSID 1 : Home 5G
+    Network type            : Infrastructure
+    Authentication          : WPA2-Personal
+    Encryption              : CCMP
+    BSSID 1                 : 98:a9:42:a6:1e:f8
+         Signal             : 99%
+         Radio type         : 802.11ax
+         Band               : 5 GHz
+         Channel            : 149
+
+SSID 2 : Cafe: Free
+    Network type            : Infrastructure
+    Authentication          : Open
+    Encryption              : None
+    BSSID 1                 : 11:22:33:44:55:66
+         Signal             : 40%
+         Radio type         : 802.11n
+         Channel            : 6
+
+SSID 3 :
+    Network type            : Infrastructure
+    Authentication          : WPA2-Personal
+"""
+
+    def test_parse(self):
+        current, nearby = wifi.parse_netsh(self.INTERFACES, self.NETWORKS)
+        self.assertEqual(current, "Home 5G")
+        by_name = {n["ssid"]: n for n in nearby}
+        self.assertEqual(set(by_name), {"Home 5G", "Cafe: Free"})   # hidden network skipped
+        self.assertEqual(by_name["Home 5G"]["band"], "5 GHz")
+        self.assertEqual(by_name["Cafe: Free"]["band"], "2.4 GHz")   # from the channel (older Windows has no Band)
+        self.assertEqual(by_name["Cafe: Free"]["security"], "None")
+
+
 class AdBlockTest(unittest.TestCase):
     def setUp(self):
         self.dir = Path(tempfile.mkdtemp())
