@@ -1,0 +1,16 @@
+{
+  "household": "The Smiths",
+  "dock": ["Netflix", "YouTube", "Spotify", "Apple TV"],
+  "sites": [
+    {
+      "name": "Wikipedia",
+      "url": "https://www.wikipedia.org/",
+      "icon": "/tv/sites/wikipedia.png",
+      "bg": "#f4f4f6",
+      "fit": "contain",
+      "glow": "#888888",
+      "sub": "Look something up"
+    }
+  ],
+  "mood": "auto"
+}

@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>TV Remote</title>
+<script src="/brands.js"></script>
+<style>
+  @font-face { font-family: "Outfit"; src: url("/tv/outfit.ttf") format("truetype"); font-weight: 100 900; }
+  :root {
+    --bg: #000;
+    --card: #1c1c1e;
+    --card-2: #2c2c2e;
+    --line: rgba(255,255,255,.09);
+    --text: #f5f5f7;
+    --muted: rgba(235,235,245,.6);
+    --faint: rgba(235,235,245,.3);
+    --blue: #0a84ff;
+    --green: #30d158;
+    --red: #ff453a;
+    --ease: cubic-bezier(.22,.9,.25,1.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.4 "Outfit", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased; user-select: none; }
+  button, input { font: inherit; color: inherit; }
+  button { border: 0; background: none; cursor: pointer; padding: 0; }
+
+  .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 36px; max-width: 1240px; margin: 0 auto; padding: 28px 24px 48px; }
+  @media (max-width: 860px) { .app { grid-template-columns: 1fr; padding: 16px; gap: 22px; } }
+
+  header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; padding: 7px 13px; border-radius: 999px; background: var(--card); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+  .dot.on { background: var(--green); }
+
+  /* ---------- Siri-remote style body ---------- */
+  .remote { width: 260px; margin: 0 auto; align-self: start; position: sticky; top: 24px; padding: 22px 22px 30px; border-radius: 58px;
+    background: linear-gradient(180deg, #3a3a3d 0%, #262628 6%, #1b1b1d 100%);
+    box-shadow: 0 40px 90px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.6);
+    display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  @media (max-width: 860px) { .remote { position: static; } }
+  .topRow { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+  .mini { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #d1d1d6; background: #111113; box-shadow: inset 0 1px 2px rgba(0,0,0,.8); }
+  .mini.power { color: var(--red); }
+  .mini svg, .rb svg { width: 20px; height: 20px; }
+  .pad { position: relative; width: 216px; height: 216px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #2f2f32, #18181a 70%);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.08); }
+  .pad .dir { position: absolute; width: 64px; height: 64px; display: grid; place-items: center; color: #8e8e93; }
+  .pad .dir span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pad .up { top: 4px; left: 76px; } .pad .down { bottom: 4px; left: 76px; }
+  .pad .left { left: 4px; top: 76px; } .pad .right { right: 4px; top: 76px; }
+  .pad .ok { position: absolute; left: 58px; top: 58px; width: 100px; height: 100px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #2a2a2d, #1d1d1f); box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 4px 10px rgba(0,0,0,.6); }
+  .pad button.hit, .pad button:active { color: #fff; }
+  .pad .ok:active, .pad .ok.hit { transform: scale(.96); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 22px; justify-items: center; }
+  .rb { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: #e5e5ea; font-size: 15px; font-weight: 600;
+    background: radial-gradient(circle at 50% 30%, #2b2b2e, #18181a); box-shadow: 0 2px 6px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07); transition: transform 120ms; }
+  .rb:active, .rb.hit { transform: scale(.92); }
+  .rocker { grid-row: span 2; width: 64px; height: 144px; border-radius: 32px; display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(circle at 50% 20%, #2b2b2e, #18181a); box-shadow: 0 2px 6px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07); }
+  .rocker button { flex: 1; font-size: 28px; font-weight: 300; color: #e5e5ea; }
+  .rocker button:active, .rocker button.hit { background: rgba(255,255,255,.06); }
+  .smallRow { display: flex; gap: 8px; }
+  .chipBtn { padding: 7px 12px; border-radius: 999px; background: #111113; color: #aeaeb2; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+  .chipBtn:active { color: #fff; }
+  .numpad { display: none; grid-template-columns: repeat(3, 52px); gap: 8px; }
+  .numpad.open { display: grid; }
+  .numpad button { height: 44px; border-radius: 14px; background: #111113; color: #e5e5ea; font-size: 17px; }
+  .vol { width: 100%; display: flex; align-items: center; gap: 10px; color: var(--faint); font-size: 12px; }
+  .vol input { flex: 1; accent-color: #fff; }
+  .vol b { color: var(--muted); width: 24px; text-align: right; font-weight: 500; }
+
+  /* ---------- cards ---------- */
+  .main { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+  .section h2 { margin: 0 0 12px 2px; font-size: 21px; font-weight: 600; letter-spacing: -.01em; display: flex; justify-content: space-between; align-items: baseline; }
+  .section h2 button { font-size: 15px; font-weight: 500; color: var(--blue); }
+  .card { background: var(--card); border-radius: 22px; padding: 18px; }
+
+  .ask { display: flex; gap: 10px; }
+  .ask input { flex: 1; min-width: 0; background: var(--card-2); border: 0; border-radius: 14px; padding: 14px 16px; font-size: 17px; outline: none; }
+  .ask input::placeholder { color: var(--faint); }
+  .ask input:focus { box-shadow: 0 0 0 2px var(--blue); }
+  .btn { background: #f5f5f7; color: #000; font-weight: 600; padding: 0 20px; border-radius: 14px; }
+  .btn:disabled { opacity: .5; }
+  .ghost { background: var(--card-2); color: var(--text); font-weight: 500; padding: 12px 16px; border-radius: 14px; }
+  .answer { margin-top: 12px; font-size: 14px; color: var(--muted); min-height: 20px; }
+  .answer b { color: var(--text); font-weight: 600; }
+  .moods { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .mood { padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 500; color: #fff; }
+  .mood:active { transform: scale(.96); }
+
+  .tiles { display: grid; gap: 14px; }
+  .tiles.big { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tiles.big.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tiles.small { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+  .tile { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; transition: transform 250ms var(--ease); text-align: center; }
+  .tile:active { transform: scale(.95); }
+  .tile .art { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; line-height: 1; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+  .tiles.big .tile .art { font-size: 26px; }
+  .tile .mark { white-space: nowrap; }
+  .tile .logoRow { display: flex; align-items: center; justify-content: center; gap: .32em; max-width: 86%; }
+  .tile .logoRow img.logo { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
+  .tile .logoRow img.round { border-radius: 22%; }
+  .tile .logoLabel { font-size: .8em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .cap { position: absolute; left: 0; right: 0; top: calc(100% + 6px); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tiles.withCaps { row-gap: 34px; padding-bottom: 22px; }
+  @media (max-width: 600px) { .tiles.big .tile .art { font-size: 15px; } .tiles.big { gap: 10px; } .tiles.big.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tiles.big.four .tile .art { font-size: 20px; } }
+  .tile.site img.contain { max-width: 58%; max-height: 62%; }
+  .tile.site img.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tile.hiddenApp .art { opacity: .28; filter: grayscale(1); }
+  .tile .tools { position: absolute; top: 6px; right: 6px; display: none; gap: 5px; z-index: 2; }
+  .editing .tile .tools { display: flex; }
+  .tools button { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,.72); box-shadow: 0 0 0 1px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.4); color: #fff; font-size: 14px; display: grid; place-items: center; backdrop-filter: blur(6px); }
+  .tools button.on { background: #f5f5f7; color: #000; }
+  .editHint { display: none; font-size: 13px; color: var(--muted); margin: -4px 0 12px 2px; }
+  .editing .editHint { display: block; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 10px 16px; border-radius: 999px; background: var(--card-2); font-weight: 500; }
+  .chip.active { background: #f5f5f7; color: #000; }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  .ab { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .abBig { font-size: 40px; font-weight: 300; letter-spacing: -.02em; line-height: 1; }
+  .abSub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .switch { margin-left: auto; width: 51px; height: 31px; border-radius: 16px; background: #39393d; position: relative; transition: background 200ms; }
+  .switch:after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; transition: transform 250ms var(--ease); box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+  .switch.on { background: var(--green); }
+  .switch.on:after { transform: translateX(20px); }
+  .steps { margin: 14px 0 0; padding: 14px 16px; background: var(--card-2); border-radius: 14px; font-size: 14px; color: var(--muted); }
+  .steps ol { margin: 6px 0 0; padding-left: 20px; }
+  .steps li { margin: 3px 0; }
+  .steps code { color: var(--text); background: rgba(255,255,255,.08); padding: 1px 7px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 13px; }
+  .recent { margin-top: 12px; font: 12px/1.6 ui-monospace, monospace; color: var(--faint); max-height: 110px; overflow: auto; }
+  .tvOk { color: var(--green); font-weight: 600; }
+
+  .setup { display: flex; flex-wrap: wrap; gap: 10px; }
+  .setup input { flex: 1 1 180px; min-width: 0; background: var(--card-2); border: 0; border-radius: 14px; padding: 12px 14px; outline: none; }
+  .found { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .found button { padding: 8px 12px; border-radius: 10px; background: var(--card-2); }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .hint code { color: var(--text); background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; }
+
+  .kbd { color: var(--faint); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .kbd kbd { background: var(--card-2); border-radius: 6px; padding: 1px 6px; color: var(--muted); font: 11px ui-monospace, monospace; }
+  @media (hover: none) { .kbdSection { display: none; } }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; place-items: center; z-index: 10; padding: 16px; backdrop-filter: blur(10px); }
+  .modal.open { display: grid; }
+  .modal .box { background: var(--card); border-radius: 24px; padding: 26px; width: min(360px, 100%); text-align: center; }
+  .modal h3 { margin: 0 0 6px; font-size: 21px; }
+  .modal p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+  .code { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; }
+  .code input { width: 54px; height: 64px; text-align: center; font-size: 28px; font-weight: 600; background: var(--card-2); border: 0; border-radius: 14px; outline: none; }
+  .code input:focus { box-shadow: 0 0 0 2px var(--blue); }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(30px); background: rgba(44,44,46,.96); padding: 11px 18px;
+    border-radius: 14px; opacity: 0; transition: .3s var(--ease); font-size: 14px; z-index: 20; max-width: calc(100% - 32px); text-align: center; backdrop-filter: blur(10px); }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Living Room</div>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Not connected</span></div>
+  </header>
+
+  <!-- ===== Remote ===== -->
+  <section class="remote" aria-label="Remote control">
+    <div class="topRow">
+      <button class="mini power" data-key="KEY_POWER" title="Power (P)" aria-label="Power">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/></svg></button>
+      <div class="smallRow">
+        <button class="chipBtn" id="numToggle">123</button>
+        <button class="chipBtn" data-key="KEY_HOME" title="The TV's original VIDAA home">VIDAA</button>
+      </div>
+      <button class="mini" data-key="KEY_INPUT" title="Input" aria-label="Input">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+    </div>
+
+    <div class="numpad" id="numpad"></div>
+
+    <div class="pad">
+      <button class="dir up" data-key="KEY_UP" aria-label="Up"><span></span></button>
+      <button class="dir left" data-key="KEY_LEFT" aria-label="Left"><span></span></button>
+      <button class="ok" data-key="KEY_OK" aria-label="OK"></button>
+      <button class="dir right" data-key="KEY_RIGHT" aria-label="Right"><span></span></button>
+      <button class="dir down" data-key="KEY_DOWN" aria-label="Down"><span></span></button>
+    </div>
+
+    <div class="grid2">
+      <button class="rb" data-key="KEY_RETURNS" title="Back (Backspace)" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="rb" id="homeBtn" title="Home screen (H)" aria-label="Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></button>
+      <button class="rb" id="playPause" title="Play / pause (Space)" aria-label="Play or pause">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5l9 7-9 7z"/><rect x="15" y="5" width="2.4" height="14" rx="1"/><rect x="19.2" y="5" width="2.4" height="14" rx="1"/></svg></button>
+      <div class="rocker">
+        <button data-key="KEY_VOLUMEUP" aria-label="Volume up">+</button>
+        <button data-key="KEY_VOLUMEDOWN" aria-label="Volume down">−</button>
+      </div>
+      <button class="rb" data-key="KEY_MUTE" title="Mute (0)" aria-label="Mute">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
+    </div>
+
+    <div class="smallRow">
+      <button class="chipBtn" data-key="KEY_BACK">◀◀</button>
+      <button class="chipBtn" data-key="KEY_CHANNELDOWN">CH −</button>
+      <button class="chipBtn" data-key="KEY_CHANNELUP">CH +</button>
+      <button class="chipBtn" data-key="KEY_FORWARDS">▶▶</button>
+    </div>
+
+    <div class="vol"><span>VOL</span><input id="volume" type="range" min="0" max="100" value="20" aria-label="Volume"><b id="volVal">–</b></div>
+  </section>
+
+  <!-- ===== Right side ===== -->
+  <main class="main">
+    <section class="section" id="setupCard">
+      <h2>Connect to your TV</h2>
+      <div class="card">
+        <div class="setup">
+          <input id="ip" placeholder="TV IP address, e.g. 192.168.1.50" inputmode="decimal">
+          <button class="btn" id="connectBtn">Connect</button>
+          <button class="ghost" id="scanBtn">Scan WiFi</button>
+          <button class="ghost" id="wakeBtn" title="Wake-on-LAN">Wake TV</button>
+        </div>
+        <div class="found" id="found"></div>
+        <div class="hint" id="setupHint">Turn the TV on and make sure it's on the same WiFi as this computer.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>What do you want to watch?</h2>
+      <div class="card">
+        <form class="ask" id="askForm">
+          <input id="askInput" placeholder="Arsenal match, a comedy, afrobeats, HDMI 2…" autocomplete="off" enterkeyhint="go">
+          <button class="btn" type="submit">Go</button>
+        </form>
+        <div class="moods" id="moods"></div>
+        <div class="answer" id="answer"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Quick access <button id="tvHome">Open TV home</button></h2>
+      <div class="tiles small withCaps" id="quick"></div>
+    </section>
+
+    <section class="section">
+      <h2>Recent sites</h2>
+      <div class="tiles small withCaps" id="sites"></div>
+    </section>
+
+    <section class="section" id="appsSection">
+      <h2>All apps <button id="editBtn">Edit</button></h2>
+      <div class="editHint">★ adds an app to Quick access. The eye hides it from the TV home screen.</div>
+      <div class="tiles small withCaps" id="apps"></div>
+    </section>
+
+    <section class="section">
+      <h2>How are you feeling? <button id="saverNow">Show verses on TV</button></h2>
+      <div class="card">
+        <div class="chips" id="moodChips"></div>
+        <div class="abSub" style="margin-top:12px">The screensaver shows Bible verses (KJV) for this mood. Auto follows the time of day.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Home screen</h2>
+      <div class="card">
+        <div class="ab">
+          <div><div style="font-size:17px;font-weight:600">Always use my home screen</div>
+            <div class="abSub" id="ownHomeSub">The TV's Home button opens your design instead of VIDAA's launcher.</div></div>
+          <button class="switch" id="ownHomeSwitch" aria-label="Always use my home screen"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Ad blocker</h2>
+      <div class="card">
+        <div class="ab">
+          <div><div class="abBig" id="abCount">0</div><div class="abSub" id="abSub">ads and trackers blocked</div></div>
+          <button class="switch" id="abSwitch" aria-label="Ad blocker on or off"></button>
+        </div>
+        <div class="steps" id="abSteps"></div>
+        <div class="recent" id="abRecent"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Inputs</h2>
+      <div class="chips" id="sources"></div>
+    </section>
+
+    <section class="section kbdSection">
+      <h2>Keyboard</h2>
+      <div class="kbd">
+        <span><kbd>↑↓←→</kbd> navigate</span><span><kbd>Enter</kbd> OK</span><span><kbd>⌫</kbd> back</span>
+        <span><kbd>H</kbd> home</span><span><kbd>M</kbd> settings</span><span><kbd>Esc</kbd> exit</span>
+        <span><kbd>+ −</kbd> volume</span><span><kbd>0</kbd> mute</span><span><kbd>Space</kbd> play/pause</span><span><kbd>P</kbd> power</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="pairModal">
+  <div class="box">
+    <h3>Pair with your TV</h3>
+    <p>Enter the 4-digit code shown on the TV screen.</p>
+    <div class="code" id="codeInputs">
+      <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+    </div>
+    <button class="btn" id="pairBtn" style="width:100%;height:48px">Pair</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var $ = function (s) { return document.querySelector(s); };
+var S = {};
+var playing = true;
+var editing = false;
+var MOOD_COLORS = { "Live football": "#1f7a3a", "Movies & series": "#8a1c2b", "News": "#1f4f8f", "Music": "#6b2bb5", "Kids": "#b07400", "Live TV": "#3a3d4f" };
+
+function toast(msg) {
+  var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove("show"); }, 2400);
+}
+function api(path, body) {
+  var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  return fetch("/api/" + path, opt).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.ok === false && d.error) throw new Error(d.error);
+    return d;
+  });
+}
+function needTV() { if (!S.connected) { toast("Connect to the TV first"); return true; } return false; }
+function hit(el) { if (!el) return; el.classList.add("hit"); setTimeout(function () { el.classList.remove("hit"); }, 120); }
+function key(k, el) {
+  if (navigator.vibrate) navigator.vibrate(10);
+  hit(el);
+  if (needTV()) return;
+  api("key", { key: k }).catch(function (e) { toast(e.message); });
+}
+function shortName(n) { var t = String(n).replace(/\s*:.*$/, "").replace("▶", "").trim(); return t === "TV Channels" ? "Live TV" : t; }
+
+document.querySelectorAll("[data-key]").forEach(function (b) { b.addEventListener("click", function () { key(b.dataset.key, b); }); });
+$("#playPause").onclick = function () { key(playing ? "KEY_PAUSE" : "KEY_PLAY", $("#playPause")); playing = !playing; };
+function openHome() { hit($("#homeBtn")); if (needTV()) return; api("home", {}).then(function () { toast("Opening your home screen on the TV"); }); }
+$("#homeBtn").onclick = openHome;
+$("#tvHome").onclick = openHome;
+
+// Number pad
+var np = $("#numpad");
+[1, 2, 3, 4, 5, 6, 7, 8, 9, "CC", 0, "⌫"].forEach(function (n) {
+  var b = document.createElement("button"); b.textContent = n;
+  var k = n === "CC" ? "KEY_SUBTITLE" : n === "⌫" ? "KEY_RETURNS" : "KEY_" + n;
+  b.onclick = function () { key(k, b); };
+  np.appendChild(b);
+});
+$("#numToggle").onclick = function () { np.classList.toggle("open"); };
+
+// Volume slider
+var vol = $("#volume"), volTimer;
+vol.addEventListener("input", function () {
+  $("#volVal").textContent = vol.value;
+  clearTimeout(volTimer);
+  volTimer = setTimeout(function () { if (S.connected) api("volume", { value: +vol.value }).catch(function (e) { toast(e.message); }); }, 150);
+});
+
+// Keyboard
+var KEYMAP = { ArrowUp: "KEY_UP", ArrowDown: "KEY_DOWN", ArrowLeft: "KEY_LEFT", ArrowRight: "KEY_RIGHT",
+  Enter: "KEY_OK", Backspace: "KEY_RETURNS", Escape: "KEY_EXIT", m: "KEY_MENU",
+  "+": "KEY_VOLUMEUP", "=": "KEY_VOLUMEUP", "-": "KEY_VOLUMEDOWN", "0": "KEY_MUTE", p: "KEY_POWER" };
+document.addEventListener("keydown", function (e) {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+  if (e.key === "h") { e.preventDefault(); return openHome(); }
+  if (e.key === " ") { e.preventDefault(); return $("#playPause").click(); }
+  var k = KEYMAP[e.key]; if (!k) return;
+  e.preventDefault();
+  key(k, document.querySelector('[data-key="' + k + '"]'));
+});
+
+// Ask: the decision model
+function ask(text) {
+  if (!text.trim()) return;
+  if (needTV()) return;
+  $("#answer").textContent = "Thinking…";
+  api("intent", { text: text }).then(function (r) {
+    $("#answer").innerHTML = r.ok ? "Opening <b>" + escapeHTML(r.label) + "</b> · " + escapeHTML(r.why) : escapeHTML(r.why);
+  }).catch(function (e) { $("#answer").textContent = e.message; });
+}
+$("#askForm").onsubmit = function (e) { e.preventDefault(); ask($("#askInput").value); $("#askInput").blur(); };
+
+// Setup
+$("#connectBtn").onclick = function () {
+  var ip = $("#ip").value.trim();
+  if (!ip) return toast("Enter the TV's IP address");
+  var btn = $("#connectBtn"); btn.disabled = true; btn.textContent = "Connecting…";
+  api("connect", { ip: ip }).then(function (r) {
+    toast(r.ok ? (r.paired ? "Connected" : "Check the TV for a pairing code") : "Couldn't connect: " + (r.error || "no response"));
+    render(r);
+  }).catch(function (e) { toast(e.message); }).then(function () { btn.disabled = false; btn.textContent = "Connect"; });
+};
+$("#scanBtn").onclick = function () {
+  var btn = $("#scanBtn"); btn.disabled = true; btn.textContent = "Scanning…";
+  var f = $("#found"); f.innerHTML = "";
+  api("scan").then(function (r) {
+    if (!r.found.length) f.innerHTML = '<span class="empty">No Hisense TV found. Is it switched on and on this WiFi?</span>';
+    r.found.forEach(function (ip) {
+      var b = document.createElement("button"); b.textContent = "📺 " + ip;
+      b.onclick = function () { $("#ip").value = ip; $("#connectBtn").click(); };
+      f.appendChild(b);
+    });
+  }).catch(function (e) { toast(e.message); }).then(function () { btn.disabled = false; btn.textContent = "Scan WiFi"; });
+};
+$("#wakeBtn").onclick = function () {
+  var go = function () { api("wake", {}).then(function () { toast("Wake signal sent"); }).catch(function (e) { toast(e.message); }); };
+  if (S.mac) return go();
+  var mac = prompt("TV's MAC address (Settings → Network → Network Information):");
+  if (mac) api("mac", { mac: mac }).then(function () { S.mac = mac; go(); });
+};
+
+// Edit mode for apps
+$("#editBtn").onclick = function () {
+  editing = !editing;
+  $("#appsSection").classList.toggle("editing", editing);
+  $("#editBtn").textContent = editing ? "Done" : "Edit";
+  appsKey = ""; render(S);
+};
+function saveConfig(dock, hidden) {
+  S.dock = dock; S.hidden = hidden;
+  appsKey = ""; render(S);
+  api("config", { dock: dock, hidden: hidden }).catch(function (e) { toast(e.message); });
+}
+
+// Mood for the screensaver's verses
+var MOODS = [["auto", "Auto"], ["peaceful", "Peaceful"], ["strong", "Strong"], ["grateful", "Grateful"], ["comfort", "Comfort"], ["hopeful", "Hopeful"], ["rest", "Rest"]];
+function drawMoods() {
+  var box = $("#moodChips"); box.innerHTML = "";
+  MOODS.forEach(function (m) {
+    var b = document.createElement("button");
+    b.className = "chip" + ((S.mood || "auto") === m[0] ? " active" : "");
+    b.textContent = m[1];
+    b.onclick = function () { S.mood = m[0]; drawMoods(); api("config", { mood: m[0] }).then(function () { toast("Mood: " + m[1]); }); };
+    box.appendChild(b);
+  });
+}
+$("#saverNow").onclick = function () {
+  if (needTV()) return;
+  api("saver", {}).then(function () { toast("Showing verses on the TV"); });
+};
+
+// Replace VIDAA's launcher with our home screen
+$("#ownHomeSwitch").onclick = function () {
+  var on = !(S.own_home !== false);
+  api("config", { own_home: on }).then(function () {
+    S.own_home = on; render(S);
+    toast(on ? "Home button now opens your home screen" : "Home button opens VIDAA's launcher again");
+  });
+};
+
+// Ad blocker
+$("#abSwitch").onclick = function () {
+  var ab = S.adblock || {};
+  api("adblock", { enabled: !ab.enabled }).then(function () { ab.enabled = !ab.enabled; render(S); });
+};
+
+// Pairing
+var codeInputs = [].slice.call(document.querySelectorAll("#codeInputs input"));
+codeInputs.forEach(function (inp, i) {
+  inp.addEventListener("input", function () { inp.value = inp.value.replace(/\D/g, ""); if (inp.value && codeInputs[i + 1]) codeInputs[i + 1].focus(); });
+  inp.addEventListener("keydown", function (e) {
+    if (e.key === "Backspace" && !inp.value && codeInputs[i - 1]) codeInputs[i - 1].focus();
+    if (e.key === "Enter") $("#pairBtn").click();
+  });
+});
+var pairDismissed = false;
+$("#pairBtn").onclick = function () {
+  var code = codeInputs.map(function (i) { return i.value; }).join("");
+  if (code.length !== 4) return toast("Enter all 4 digits");
+  api("pair", { code: code }).then(function () { pairDismissed = true; $("#pairModal").classList.remove("open"); toast("Pairing…"); })
+    .catch(function (e) { toast(e.message); });
+};
+
+// ---------- rendering ----------
+var appsKey = "", sitesKey = "", moodsKey = "";
+function appTile(a, big) {
+  var t = document.createElement("button");
+  t.className = "tile";
+  t.innerHTML = tileHTML(a.name, big) + (big ? "" : '<div class="cap"></div>');
+  if (!big) t.querySelector(".cap").textContent = shortName(a.name);
+  t.onclick = function () {
+    if (editing) return;
+    if (needTV()) return;
+    api("launch", a).then(function () { toast("Opening " + shortName(a.name)); }).catch(function (e) { toast(e.message); });
+  };
+  return t;
+}
+
+function render(s) {
+  var wasConnected = S.connected;
+  S = s;
+  $("#dot").classList.toggle("on", !!s.connected);
+  $("#statusText").textContent = s.connected ? (s.paired ? "Connected · " + s.ip : "Pairing · " + s.ip) : (s.ip ? "TV offline · " + s.ip : "Not connected");
+  if (s.ip && !$("#ip").value) $("#ip").value = s.ip;
+  $("#setupCard").style.display = s.connected && !s.needs_pairing ? "none" : "";
+  $("#setupHint").innerHTML = !s.has_cert
+    ? "Your TV needs the VIDAA app's client certificate. Put <code>El.p12</code> (or a cert/key pair) in the <code>certs</code> folder, then press Connect."
+    : (s.error ? "⚠ " + escapeHTML(s.error) : "Turn the TV on and make sure it's on the same WiFi as this computer.");
+  if (s.connected && !wasConnected) pairDismissed = false;
+  if (s.needs_pairing && !pairDismissed && !$("#pairModal").classList.contains("open")) {
+    $("#pairModal").classList.add("open"); codeInputs.forEach(function (i) { i.value = ""; }); codeInputs[0].focus();
+  }
+  if (s.volume != null && document.activeElement !== vol) { vol.value = s.volume; $("#volVal").textContent = s.volume; }
+
+  // Moods
+  var mk = JSON.stringify(s.moods || []);
+  if (mk !== moodsKey) {
+    moodsKey = mk;
+    var me = $("#moods"); me.innerHTML = "";
+    (s.moods || []).forEach(function (m) {
+      var b = document.createElement("button"); b.className = "mood"; b.textContent = m.label;
+      b.style.background = MOOD_COLORS[m.label] || "#3a3a3c";
+      b.onclick = function () { $("#askInput").value = ""; ask(m.phrase); };
+      me.appendChild(b);
+    });
+  }
+
+  // Apps, quick access
+  var apps = s.apps || [], dock = s.dock || [], hidden = s.hidden || [];
+  var ak = JSON.stringify([apps.map(function (a) { return a.name; }), dock, hidden, editing]);
+  if (ak !== appsKey) {
+    appsKey = ak;
+    var q = $("#quick"); q.innerHTML = "";
+    dock.forEach(function (n) {
+      var a = apps.filter(function (x) { return x.name === n; })[0];
+      if (a) q.appendChild(appTile(a, false));
+    });
+    var grid = $("#apps"); grid.innerHTML = "";
+    apps.forEach(function (a) {
+      var isHidden = hidden.indexOf(a.name) >= 0, isDock = dock.indexOf(a.name) >= 0;
+      if (isDock && !editing) return;
+      if (isHidden && !editing) return;
+      var t = appTile(a, false);
+      if (isHidden) t.classList.add("hiddenApp");
+      var tools = document.createElement("div"); tools.className = "tools";
+      var star = document.createElement("button"); star.textContent = "★"; star.className = isDock ? "on" : "";
+      star.title = isDock ? "Remove from Quick access" : "Add to Quick access";
+      star.onclick = function (e) {
+        e.stopPropagation();
+        var d = dock.filter(function (n) { return n !== a.name; });
+        if (!isDock) d.push(a.name);
+        saveConfig(d, hidden.filter(function (n) { return n !== a.name; }));
+      };
+      var eye = document.createElement("button"); eye.textContent = isHidden ? "◌" : "◉"; eye.className = isHidden ? "" : "on";
+      eye.title = isHidden ? "Show on TV home" : "Hide from TV home";
+      eye.onclick = function (e) {
+        e.stopPropagation();
+        var h = hidden.filter(function (n) { return n !== a.name; });
+        if (!isHidden) h.push(a.name);
+        saveConfig(dock.filter(function (n) { return n !== a.name || isHidden; }), h);
+      };
+      tools.appendChild(star); tools.appendChild(eye); t.appendChild(tools);
+      grid.appendChild(t);
+    });
+    if (!grid.children.length) grid.innerHTML = '<span class="empty">Connect to the TV to load its apps.</span>';
+  }
+
+  // Sites
+  var sk = JSON.stringify(s.sites || []);
+  if (sk !== sitesKey) {
+    sitesKey = sk;
+    var se = $("#sites"); se.innerHTML = "";
+    (s.sites || []).forEach(function (site) {
+      var host = site.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/.*$/, "");
+      var t = document.createElement("button"); t.className = "tile site";
+      t.innerHTML = '<div class="art" style="background:' + site.bg + '"><img class="' + site.fit + '" src="' + site.icon + '" alt=""></div><div class="cap"></div>';
+      t.querySelector(".cap").textContent = site.name + " · " + host;
+      t.onclick = function () {
+        if (needTV()) return;
+        api("launch", { appId: "site-" + site.name, name: site.name, url: site.url }).then(function () { toast("Opening " + site.name + " on the TV"); });
+      };
+      se.appendChild(t);
+    });
+  }
+
+  if ((s.mood || "auto") !== drawMoods._last) { drawMoods._last = s.mood || "auto"; drawMoods(); }
+
+  // Home screen takeover
+  var own = s.own_home !== false;
+  $("#ownHomeSwitch").classList.toggle("on", own);
+  $("#ownHomeSub").textContent = own
+    ? "On: the TV's Home button opens your design instead of VIDAA's launcher."
+    : "Off: the Home button opens VIDAA's own launcher.";
+
+  // Ad blocker
+  var ab = s.adblock || {};
+  $("#abCount").textContent = (ab.blocked || 0).toLocaleString();
+  $("#abSub").textContent = ab.running
+    ? (ab.enabled ? "ads and trackers blocked · " + (ab.domains || 0).toLocaleString() + " domains on the list" : "Ad blocker is paused")
+    : (ab.error || "Ad blocker isn't running");
+  $("#abSwitch").classList.toggle("on", !!(ab.running && ab.enabled));
+  var tvUsing = s.ip && (ab.clients || []).indexOf(s.ip) >= 0;
+  $("#abSteps").innerHTML = tvUsing
+    ? '<span class="tvOk">✓ Your TV is using the ad blocker.</span> Keep this Mac awake and on WiFi, or the TV loses its internet.'
+    : "<b style='color:var(--text)'>Turn it on for the TV</b> (one time):<ol>" +
+      "<li>On the TV open <code>Settings → Network → Network Configuration</code>.</li>" +
+      "<li>Choose your WiFi network, then <code>IP Settings</code> (or <code>Advanced</code>).</li>" +
+      "<li>Set DNS to <b>Manual</b> and enter <code>" + escapeHTML(s.dns_ip || "") + "</code>.</li></ol>" +
+      "Give this Mac a fixed IP in your router so the address doesn't change.";
+  $("#abRecent").innerHTML = (ab.recent || []).map(function (r) { return "✕ " + escapeHTML(r.domain); }).join("<br>");
+
+  // Logos come as data-src (the TV home loads them late); the remote shows them right away.
+  [].forEach.call(document.querySelectorAll("img[data-src]"), function (im) {
+    im.onerror = function () {   // missing artwork: show the name instead
+      var row = im.parentNode, name = im.getAttribute("data-name");
+      if (name && row) row.innerHTML = '<span class="logoLabel" style="color:#fff">' + escapeHTML(name) + '</span>';
+    };
+    im.src = im.getAttribute("data-src"); im.removeAttribute("data-src");
+  });
+
+  // Inputs
+  var srcEl = $("#sources"), sources = s.sources || [];
+  srcEl.innerHTML = sources.length ? "" : '<span class="empty">Connect to see HDMI and TV inputs.</span>';
+  sources.forEach(function (src) {
+    var b = document.createElement("button");
+    b.className = "chip" + (s.state && s.state.sourcename === src.sourcename ? " active" : "");
+    b.textContent = src.displayname || src.sourcename;
+    b.onclick = function () {
+      if (needTV()) return;
+      api("source", { sourceid: src.sourceid, sourcename: src.sourcename }).then(function () { toast("Switching to " + b.textContent); });
+    };
+    srcEl.appendChild(b);
+  });
+}
+
+function poll() {
+  api("status").then(render).catch(function () { $("#statusText").textContent = "Bridge offline: run start.sh"; })
+    .then(function () { setTimeout(poll, 1500); });
+}
+poll();
+</script>
+</body>
+</html>

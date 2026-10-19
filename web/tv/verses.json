@@ -1,0 +1,66 @@
+{
+  "_note": "King James Version (public domain). Moods are picked on the phone remote; 'auto' follows the time of day.",
+  "auto": { "morning": "hopeful", "afternoon": "strong", "night": "rest" },
+  "moods": {
+    "peaceful": {
+      "label": "Peaceful",
+      "verses": [
+        { "ref": "John 14:27", "text": "Peace I leave with you, my peace I give unto you: not as the world giveth, give I unto you. Let not your heart be troubled, neither let it be afraid." },
+        { "ref": "1 Peter 5:7", "text": "Casting all your care upon him; for he careth for you." },
+        { "ref": "Isaiah 26:3", "text": "Thou wilt keep him in perfect peace, whose mind is stayed on thee: because he trusteth in thee." },
+        { "ref": "Matthew 11:28", "text": "Come unto me, all ye that labour and are heavy laden, and I will give you rest." },
+        { "ref": "Philippians 4:7", "text": "And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus." }
+      ]
+    },
+    "strong": {
+      "label": "Strong",
+      "verses": [
+        { "ref": "Isaiah 40:31", "text": "But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint." },
+        { "ref": "Philippians 4:13", "text": "I can do all things through Christ which strengtheneth me." },
+        { "ref": "Joshua 1:9", "text": "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest." },
+        { "ref": "2 Corinthians 12:9", "text": "My grace is sufficient for thee: for my strength is made perfect in weakness." },
+        { "ref": "Psalm 46:1", "text": "God is our refuge and strength, a very present help in trouble." }
+      ]
+    },
+    "grateful": {
+      "label": "Grateful",
+      "verses": [
+        { "ref": "Psalm 118:24", "text": "This is the day which the LORD hath made; we will rejoice and be glad in it." },
+        { "ref": "1 Thessalonians 5:16-18", "text": "Rejoice evermore. Pray without ceasing. In every thing give thanks: for this is the will of God in Christ Jesus concerning you." },
+        { "ref": "Psalm 100:4", "text": "Enter into his gates with thanksgiving, and into his courts with praise: be thankful unto him, and bless his name." },
+        { "ref": "James 1:17", "text": "Every good gift and every perfect gift is from above, and cometh down from the Father of lights, with whom is no variableness, neither shadow of turning." },
+        { "ref": "Lamentations 3:22-23", "text": "It is of the LORD's mercies that we are not consumed, because his compassions fail not. They are new every morning: great is thy faithfulness." }
+      ]
+    },
+    "comfort": {
+      "label": "Comfort",
+      "verses": [
+        { "ref": "Psalm 34:18", "text": "The LORD is nigh unto them that are of a broken heart; and saveth such as be of a contrite spirit." },
+        { "ref": "Matthew 5:4", "text": "Blessed are they that mourn: for they shall be comforted." },
+        { "ref": "Psalm 147:3", "text": "He healeth the broken in heart, and bindeth up their wounds." },
+        { "ref": "Psalm 30:5", "text": "Weeping may endure for a night, but joy cometh in the morning." },
+        { "ref": "Revelation 21:4", "text": "And God shall wipe away all tears from their eyes; and there shall be no more death, neither sorrow, nor crying, neither shall there be any more pain: for the former things are passed away." }
+      ]
+    },
+    "hopeful": {
+      "label": "Hopeful",
+      "verses": [
+        { "ref": "Jeremiah 29:11", "text": "For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end." },
+        { "ref": "Proverbs 3:5-6", "text": "Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." },
+        { "ref": "Romans 8:28", "text": "And we know that all things work together for good to them that love God, to them who are the called according to his purpose." },
+        { "ref": "Psalm 119:105", "text": "Thy word is a lamp unto my feet, and a light unto my path." },
+        { "ref": "Romans 15:13", "text": "Now the God of hope fill you with all joy and peace in believing, that ye may abound in hope, through the power of the Holy Ghost." }
+      ]
+    },
+    "rest": {
+      "label": "Rest",
+      "verses": [
+        { "ref": "Psalm 4:8", "text": "I will both lay me down in peace, and sleep: for thou, LORD, only makest me dwell in safety." },
+        { "ref": "Proverbs 3:24", "text": "When thou liest down, thou shalt not be afraid: yea, thou shalt lie down, and thy sleep shall be sweet." },
+        { "ref": "Psalm 23:1-2", "text": "The LORD is my shepherd; I shall not want. He maketh me to lie down in green pastures: he leadeth me beside the still waters." },
+        { "ref": "Psalm 121:3", "text": "He will not suffer thy foot to be moved: he that keepeth thee will not slumber." },
+        { "ref": "Psalm 91:1", "text": "He that dwelleth in the secret place of the most High shall abide under the shadow of the Almighty." }
+      ]
+    }
+  }
+}

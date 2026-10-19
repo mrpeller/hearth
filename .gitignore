@@ -1,0 +1,12 @@
+# Your TV session, tokens and preferences
+data/
+# The VIDAA app certificate belongs to Hisense: never commit it
+certs/
+# Local Python
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Your own settings (copy settings.example.json)
+settings.json
