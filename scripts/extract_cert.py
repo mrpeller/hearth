@@ -54,7 +54,7 @@ def main():
     p12.write_bytes(data)
     cert, key = p12.with_name(p12.stem + "_cert.pem"), p12.with_name(p12.stem + "_key.pem")
     if not p12_to_pem(p12, cert, key):
-        sys.exit(f"Saved {p12.name}, but couldn't convert it (is the openssl tool installed?).")
+        sys.exit(f"Saved {p12.name}, but couldn't convert it. Run this with Hearth's Python (.venv), which has the cryptography package.")
     print(f"Saved the certificate to certs/{cert.name} and certs/{key.name}")
 
 

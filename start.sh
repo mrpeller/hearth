@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Start Hearth. Creates a virtual environment on first run.
+# Start Hearth (macOS / Linux). Creates a virtual environment on first run and restarts
+# Hearth after it updates itself from GitHub. On Windows use start.cmd instead.
 # The TV needs TLS 1.3, so this picks a Python whose SSL library supports it
 # (macOS's built-in Python doesn't; `uv` or Homebrew Python do).
 set -euo pipefail
@@ -17,12 +18,10 @@ if [ ! -x .venv/bin/python ] || ! has_tls13 .venv/bin/python; then
   if [ -n "$PY" ]; then
     echo "Setting up with $PY"
     "$PY" -m venv .venv
-    .venv/bin/pip install -q --upgrade pip
-    .venv/bin/pip install -q -r requirements.txt
   elif [ -n "$UV" ]; then
     echo "Setting up with uv"
     "$UV" venv -q --python 3.12 .venv
-    "$UV" pip install -q --python .venv/bin/python -r requirements.txt
+    "$UV" pip install -q --python .venv/bin/python pip
   else
     echo "Hearth needs a Python with TLS 1.3. Install one of:"
     echo "  uv:        https://docs.astral.sh/uv/  (then run ./start.sh again)"
@@ -31,6 +30,20 @@ if [ ! -x .venv/bin/python ] || ! has_tls13 .venv/bin/python; then
   fi
 fi
 
-[ -f adblock/blocklist.txt ] || .venv/bin/python scripts/build_blocklist.py || echo "Ad block list not built; only adblock/base.txt will be used."
+# Install Python packages when requirements.txt is new or has changed (e.g. after an update).
+sync_requirements() {
+  local sum; sum="$(cksum requirements.txt | cut -d' ' -f1)"
+  if [ "$(cat .venv/.requirements 2>/dev/null)" != "$sum" ]; then
+    .venv/bin/python -m pip install -q --disable-pip-version-check -r requirements.txt
+    echo "$sum" > .venv/.requirements
+  fi
+}
 
-exec .venv/bin/python -m hearth
+while true; do
+  sync_requirements
+  [ -f adblock/blocklist.txt ] || .venv/bin/python scripts/build_blocklist.py || echo "Ad block list not built; only adblock/base.txt will be used."
+  code=0
+  .venv/bin/python -m hearth || code=$?
+  [ "$code" -eq 3 ] || exit "$code"   # 3 = updated from GitHub: start the new version
+  echo "Restarting with the new version..."
+done

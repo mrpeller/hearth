@@ -7,6 +7,7 @@ from . import config, intent, network
 from .adblock import AdBlocker
 from .certs import find as find_certs
 from .tv import TV
+from .updater import Updater
 from .wifi import Watcher
 
 
@@ -28,6 +29,8 @@ class App:
         if self.settings.get("adblock"):
             self.adblock.start()
         self.wifi.start()
+        if self.settings.get("auto_update"):
+            Updater(interval=60 * float(self.settings.get("update_minutes"))).start()
         threading.Thread(target=self._keep_connected, daemon=True).start()
         threading.Thread(target=self._watch_screen, daemon=True).start()
 

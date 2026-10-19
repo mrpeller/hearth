@@ -1,7 +1,7 @@
 """Finding the TV on the local network."""
 import concurrent.futures as cf
 import email.utils
-import os
+import platform
 import re
 import socket
 import subprocess
@@ -9,6 +9,16 @@ import time
 import urllib.request
 
 TV_PORT = 36669  # the TV's remote-control (MQTT) port
+
+
+def run(cmd, timeout=30, env=None):
+    """Run a command and return its output ("" on failure), without flashing a console window on Windows."""
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=timeout,
+                              creationflags=flags, env=env).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def local_ip():
@@ -52,12 +62,9 @@ def mac_for(ip):
                     return parts[3].lower()
     except OSError:
         pass
-    try:
-        out = subprocess.run(["arp", "-n", ip], capture_output=True, text=True, timeout=5).stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    m = re.search(r"((?:[0-9a-fA-F]{1,2}:){5}[0-9a-fA-F]{1,2})", out)
-    return ":".join(p.zfill(2) for p in m.group(1).lower().split(":")) if m else ""
+    out = run(["arp", "-a", ip] if system() == "Windows" else ["arp", "-n", ip], timeout=5)
+    m = re.search(r"((?:[0-9a-fA-F]{1,2}[:-]){5}[0-9a-fA-F]{1,2})", out)
+    return ":".join(p.zfill(2) for p in re.split("[:-]", m.group(1).lower())) if m else ""
 
 
 def tv_clock(ip):
@@ -87,5 +94,6 @@ def wake_on_lan(mac):
         s.close()
 
 
-def is_linux():
-    return os.uname().sysname == "Linux"
+def system():
+    """The operating system: Darwin (macOS), Linux or Windows."""
+    return platform.system()

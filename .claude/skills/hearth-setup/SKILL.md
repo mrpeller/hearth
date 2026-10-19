@@ -1,6 +1,6 @@
 ---
 name: hearth-setup
-description: Set up Hearth (this repo) for someone's Hisense VIDAA TV - check Python/TLS, start the bridge, find and pair the TV, add the VIDAA certificate, personalise settings.json, install the background service and optionally the ad blocker. Use when the user asks to set up, install, pair, configure or troubleshoot Hearth or their Hisense/VIDAA TV home screen.
+description: Set up Hearth (this repo) for someone's Hisense VIDAA TV on Windows, macOS or Linux - check Python/TLS, start the bridge, find and pair the TV, add the VIDAA certificate, personalise settings.json, install the background service, auto-updates and optionally the ad blocker. Use when the user asks to set up, install, pair, configure or troubleshoot Hearth or their Hisense/VIDAA TV home screen.
 ---
 
 # Setting up Hearth
@@ -8,22 +8,27 @@ description: Set up Hearth (this repo) for someone's Hisense VIDAA TV - check Py
 Hearth is a Python bridge (`hearth/`) plus two web pages (`web/`): a phone remote and a TV home
 screen. Work through these steps in order, checking each before moving on. Read README.md for detail.
 
-## 1. Python with TLS 1.3
+## 1. Python with TLS 1.3, and Git
 
-The TV only speaks TLS 1.3. Check: `python3 -c "import ssl; print(ssl.HAS_TLSv1_3)"`.
-`start.sh` finds a suitable Python itself, or uses `uv` if it's installed. If neither exists,
-ask the user to install uv or Homebrew Python; don't install system software without asking.
+The TV only speaks TLS 1.3. Check: `python3 -c "import ssl; print(ssl.HAS_TLSv1_3)"` (Windows: `py -3 -c ...`).
+- Windows 10/11: Python from python.org (with "Add to PATH") and Git for Windows. Start with `start.cmd`.
+- macOS: `start.sh` uses `uv` or Homebrew Python (the built-in one is too old).
+- Linux / Raspberry Pi OS: system Python is fine. Start with `start.sh`.
+Ask before installing anything system-wide. Git is needed for auto-updates (`hearth/updater.py`).
 
 ## 2. The VIDAA client certificate
 
 Check `certs/` for a `.p12` or `*_cert.pem` + `*_key.pem`. If missing, the user needs the
 "VIDAA Smart TV" Android app (`com.universal.remote.multi`) as an .apk/.apkm. Ask them to download
 it from a source they trust, or ask permission before downloading it yourself. Then run
-`python3 scripts/extract_cert.py <file>`. Never commit, upload or share anything in `certs/`.
+`.venv/bin/python scripts/extract_cert.py <file>` (Windows: `.venv\Scripts\python ...`; run the start
+script once first so `.venv` exists). If another machine already has Hearth, copying its `certs/` folder
+(and `data/state.json`, to skip pairing) is enough. Never commit, upload or share anything in `certs/`.
 
 ## 3. Start the bridge
 
-Run `./start.sh` in the background (it keeps running). It prints the phone remote address.
+Run `./start.sh` (Windows: `start.cmd`) in the background; it keeps running and restarts itself
+after updates (exit code 3). It prints the phone remote address.
 Confirm with `curl -s localhost:8765/api/status`.
 
 ## 4. Find and pair the TV
@@ -44,8 +49,12 @@ Open the home screen on the TV with `POST /api/home` and ask the user how it loo
 
 ## 6. Keep it running
 
-`./scripts/install_service.sh` (LaunchAgent on macOS, systemd on Linux). Explain that the TV only
-shows Hearth while this machine is on and at home; a Raspberry Pi is the usual always-on choice.
+- macOS/Linux: `./scripts/install_service.sh` (LaunchAgent / systemd).
+- Windows: `scripts\install_service.ps1` (asks for admin): a hidden scheduled task at sign-in, firewall rules
+  for TCP 8765 and UDP 53, Wi-Fi set to Private, and with `-KeepAwake` no sleep on AC power or lid close.
+  Ask the user before using `-KeepAwake`, since it changes the laptop's power settings.
+Explain that the TV only shows Hearth while this machine is on, awake and at home; a Raspberry Pi is
+the usual always-on choice. Updates arrive automatically from the GitHub repo every 5 minutes.
 
 ## 7. Ad blocker (optional, ask first)
 
