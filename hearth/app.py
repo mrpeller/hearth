@@ -35,7 +35,7 @@ class App:
     def _keep_connected(self):
         """Reconnect within a couple of seconds whenever the TV comes back."""
         while True:
-            if self.tv.ip and not self.tv.connected and not self.tv.needs_pairing:
+            if self.tv.ip and not self.tv.connected and not self.tv.needs_pairing and not self.tv.connecting:
                 self.tv.connect(self.tv.ip)
             time.sleep(2)
 

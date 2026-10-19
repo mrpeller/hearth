@@ -38,6 +38,7 @@ class TV:
         self.last_ready = 0.0
         self._last_guard = 0.0
         self._lock = threading.Lock()
+        self._connecting = threading.Lock()   # only one connect() at a time
         self._vol_cond = threading.Condition()
         self._vol_seq = 0
 
@@ -83,8 +84,25 @@ class TV:
         c.disconnect()
         return None, str(result.get("rc", "no answer"))
 
+    @property
+    def connecting(self):
+        return self._connecting.locked()
+
     def connect(self, ip):
-        """Reconnect with the saved token (refreshing it if needed), or start pairing."""
+        """Reconnect with the saved token (refreshing it if needed), or start pairing.
+
+        Two sessions with the same client id knock each other off the TV, so a connect
+        that starts while another is running just waits for it instead.
+        """
+        if not self._connecting.acquire(blocking=False):
+            with self._connecting:
+                return self.connected
+        try:
+            return self._connect(ip)
+        finally:
+            self._connecting.release()
+
+    def _connect(self, ip):
         self.disconnect()
         self.last_error = ""
         cert, key = certs.find(self.cert_dir) if self.cert_dir else certs.find()
@@ -168,12 +186,15 @@ class TV:
             self.refresh()
 
     def disconnect(self):
-        if self.client:
-            self.client.loop_stop()
-            self.client.disconnect()
-        self.client, self.connected = None, False
+        client, self.client, self.connected = self.client, None, False
+        if client:
+            client.on_disconnect = None
+            client.disconnect()
+            client.loop_stop()
 
-    def _on_disconnect(self, *_args, **_kwargs):
+    def _on_disconnect(self, client, *_args, **_kwargs):
+        if client is not self.client:   # a session we've already replaced
+            return
         self.connected = False
         events.add("tv", "disconnected")
 
@@ -317,9 +338,11 @@ class TV:
 
     # ---- keeping Hearth on screen ------------------------------------
     def open_home(self, url=None):
+        already_open = self.state.get("name") == "home"
         opened = time.time()
         self.launch({"appId": "hearth", "name": "Home", "url": url or self.home_url()})
-        threading.Timer(7, self._check_loaded, args=(opened, url is None)).start()
+        if not already_open:   # the TV doesn't reload a page that's already showing, so only check fresh opens
+            threading.Timer(7, self._check_loaded, args=(opened, url is None)).start()
 
     def page_ready(self):
         self.last_ready = time.time()

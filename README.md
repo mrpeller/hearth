@@ -46,7 +46,7 @@ These are limits of VIDAA, not bugs:
 ### 1. Get Hearth
 
 ```bash
-git clone https://github.com/<you>/hearth.git
+git clone https://github.com/mrpeller/hearth.git
 cd hearth
 ```
 
