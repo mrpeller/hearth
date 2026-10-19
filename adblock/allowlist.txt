@@ -1,0 +1,3 @@
+# Never blocked, even if a list above includes them. One domain per line.
+# Add any domain here if an app stops working with the ad blocker on.
+accounts.google.com

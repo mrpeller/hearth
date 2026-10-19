@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, initial-scale=1">
+<title>Home</title>
+<script src="/brands.js"></script>
+<style>
+  @font-face { font-family: "Outfit"; src: url("/tv/outfit.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+  :root {
+    --ink: #fff;
+    --dim: rgba(255,255,255,.72);
+    --faint: rgba(255,255,255,.5);
+    --line: rgba(255,255,255,.16);
+    --ease: cubic-bezier(.2,.9,.3,1.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  body { color: var(--ink); font-family: "Outfit", -apple-system, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: #000; }
+
+  /* ---------- photo carousel ---------- */
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1200ms ease; will-change: opacity; }
+  .bg.on { opacity: 1; }
+  /* Shading keeps text readable on any photo: dark on the left (clock, title) and at the bottom. */
+  .scrim { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 45%, rgba(0,0,0,.08) 75%),
+                linear-gradient(180deg, rgba(0,0,0,.4) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%); }
+  .tint { position: absolute; inset: 0; opacity: 0; transition: opacity 600ms ease; pointer-events: none; }
+  .tint.on { opacity: .35; }
+  .credit { position: absolute; right: 72px; bottom: 12px; font-size: 13px; color: rgba(255,255,255,.55); letter-spacing: .02em; z-index: 3; }
+
+  /* ---------- header ---------- */
+  header { position: absolute; left: 88px; right: 88px; top: 52px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 3;
+    text-shadow: 0 1px 12px rgba(0,0,0,.45); }
+  .greet { font-size: 17px; letter-spacing: .26em; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+  .timeRow { display: flex; align-items: baseline; margin-top: 6px; }
+  .time { font-size: 68px; font-weight: 200; letter-spacing: -.02em; line-height: 1; }
+  .ampm { font-size: 20px; margin-left: 8px; color: var(--dim); }
+  .sep { width: 1.5px; height: 30px; background: var(--faint); margin: 0 22px; align-self: center; }
+  .date { font-size: 17px; letter-spacing: .22em; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+  .pills { display: flex; gap: 12px; margin-top: 14px; text-shadow: none; }
+  .pill { height: 46px; padding: 0 20px; border-radius: 23px; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 500;
+    background: rgba(30,30,34,.5); border: 1px solid var(--line); transition: transform 220ms var(--ease), background 150ms; }
+  .pill .dot { width: 9px; height: 9px; border-radius: 50%; background: #30d158; }
+  .pill .dot.off { background: #ff453a; }
+  .pill .dot.warn { background: #ff9f0a; }
+  .pill svg { width: 20px; height: 20px; }
+  .pill.focus { background: #fff; color: #000; transform: scale(1.06); }
+
+  /* ---------- hero ---------- */
+  .hero { position: absolute; left: 88px; top: 232px; right: 700px; z-index: 2; text-shadow: 0 2px 18px rgba(0,0,0,.5); }
+  .heroTitle { font-size: 54px; font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
+  .heroSub { font-size: 20px; color: var(--dim); margin-top: 8px; min-height: 26px; }
+  .heroSub b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- glass sheet with the rows ---------- */
+  .sheet { position: absolute; left: 64px; right: 64px; top: 372px; bottom: 40px; border-radius: 34px; z-index: 2; overflow: hidden;
+    background: rgba(18,18,22,.46); border: 1px solid var(--line);
+    box-shadow: 0 30px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); }
+  /* Frosted glass without a live blur: a pre-blurred copy of the same photo, lined up with the one behind. */
+  .sheet .glass { position: absolute; left: -64px; top: -372px; width: 1920px; height: 1080px; background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 1200ms ease; }
+  .sheet .glass.on { opacity: 1; }
+  .sheet .shade { position: absolute; inset: 0; background: rgba(16,16,20,.42); }
+  #column { position: absolute; left: 32px; right: 32px; top: 26px; transition: transform 300ms var(--ease); will-change: transform; }
+  .row { position: relative; margin-bottom: 44px; transition: opacity 250ms ease; }
+  .row.gone { opacity: 0; }
+  .rowLabel { font-size: 14px; letter-spacing: .24em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin: 0 0 12px 4px; }
+  .items { display: flex; gap: 20px; position: relative; }
+
+  .tile { position: relative; flex: 0 0 auto; border-radius: 16px; transition: transform 220ms var(--ease); }
+  .tile .art { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 30px; line-height: 1; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+  .tile .mark { display: flex; align-items: center; white-space: nowrap; }
+  .tile .logoRow { display: flex; align-items: center; justify-content: center; gap: .32em; max-width: 86%; }
+  .tile .logoRow img.logo { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
+  .tile .logoRow img.round { border-radius: 22%; }
+  /* Artwork fades in once it arrives, after the screen is already drawn. */
+  img[data-src] { opacity: 0; }
+  img.in { opacity: 1; transition: opacity 260ms ease; }
+  .tile .logoLabel { font-size: 1em; font-weight: 600; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app .logoLabel { font-size: .78em; }
+  .tile .name { position: absolute; left: 0; right: 0; top: calc(100% + 8px); text-align: center; font-size: 15px; color: var(--ink);
+    opacity: 0; transition: opacity 180ms; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.focus { transform: scale(1.08); z-index: 2; }
+  .tile.focus .name { opacity: 1; }
+  .tile.focus .art { box-shadow: 0 0 0 3px #fff, 0 18px 36px rgba(0,0,0,.5); }
+
+  /* Every card is the same size. */
+  .quick, .site, .app { width: 226px; height: 127px; }
+  .quick .art, .app .art { font-size: 26px; }
+  .quick .logoLabel { font-size: .78em; }
+  .site .art img.contain { max-width: 60%; max-height: 60%; }
+  .site .art img.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .site .art .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.7)); }
+  .site .art .siteName { position: absolute; left: 12px; bottom: 9px; font-size: 16px; font-weight: 600; color: #fff; }
+  .site .art .url { position: absolute; right: 10px; top: 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 7px; border-radius: 6px; background: rgba(0,0,0,.5); color: rgba(255,255,255,.9); font-weight: 600; }
+
+
+  /* ---------- overlays ---------- */
+  .panel { position: absolute; top: 116px; right: 88px; width: 380px; border-radius: 26px; padding: 14px;
+    background: rgba(28,28,32,.96); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.6); z-index: 10; display: none; }
+  .panel.open { display: block; }
+  .panel h3 { margin: 4px 10px 10px; font-size: 14px; letter-spacing: .24em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .opt { height: 54px; border-radius: 14px; display: flex; align-items: center; padding: 0 18px; font-size: 21px; }
+  .opt small { margin-left: auto; font-size: 14px; color: var(--faint); }
+  .opt.focus { background: #fff; color: #000; }
+  .opt.focus small { color: rgba(0,0,0,.5); }
+
+  /* Wi-Fi / settings dropdown */
+  #wifiPanel, .panel.wide { width: 460px; padding: 14px 10px 10px; }
+  .wrow .val { margin-left: auto; font-size: 15px; color: var(--faint); white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .wrow.focus .val { color: rgba(0,0,0,.6); }
+  .wrow .chev { font-size: 22px; line-height: 1; opacity: .6; }
+  .wrow .bar { width: 120px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .wrow.focus .bar { background: rgba(0,0,0,.15); }
+  .wrow .bar i { display: block; height: 100%; background: currentColor; border-radius: 3px; }
+  .wrow .num { width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+  .toggle { width: 44px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.22); position: relative; flex: 0 0 auto; }
+  .toggle:after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 180ms var(--ease); }
+  .toggle.on { background: #30d158; }
+  .toggle.on:after { transform: translateX(18px); }
+  .wrow.focus .toggle:not(.on) { background: rgba(0,0,0,.2); }
+  #wifiPanel .list, #settingsList, #inputsList { max-height: 560px; overflow: hidden; position: relative; }
+  .wgroup { margin: 12px 14px 6px; font-size: 13px; letter-spacing: .22em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .wrow { height: 56px; border-radius: 14px; display: flex; align-items: center; gap: 12px; padding: 0 16px; font-size: 19px; }
+  .wrow .meta { margin-left: auto; font-size: 13px; color: var(--faint); white-space: nowrap; }
+  .wrow svg { width: 20px; height: 20px; flex: 0 0 auto; opacity: .85; }
+  .wrow .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .wrow.current { height: 64px; background: rgba(255,255,255,.06); }
+  .wrow.current .sub { display: block; font-size: 13px; color: #30d158; margin-top: 2px; }
+  .wrow.focus { background: #fff; color: #000; }
+  .wrow.focus .meta { color: rgba(0,0,0,.55); }
+  .wrow.focus.current .sub { color: #1a7f37; }
+  .wsearch { height: 50px; margin: 6px 6px 2px; border-radius: 14px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: rgba(255,255,255,.08); }
+  .wsearch svg { width: 20px; height: 20px; flex: 0 0 auto; opacity: .7; }
+  .wsearch input { flex: 1; background: none; border: 0; outline: none; color: inherit; font: inherit; font-size: 18px; }
+  .wsearch input::placeholder { color: var(--faint); }
+  .wsearch.focus { background: #fff; color: #000; }
+  .wsearch.focus input::placeholder { color: rgba(0,0,0,.45); }
+  .wempty { padding: 10px 16px; font-size: 15px; color: var(--faint); }
+  #toast { position: absolute; left: 50%; top: 40px; transform: translate(-50%, -20px); opacity: 0; z-index: 12;
+    background: rgba(28,28,32,.95); border: 1px solid var(--line); padding: 14px 26px; border-radius: 20px; font-size: 20px;
+    transition: opacity 220ms, transform 260ms var(--ease); max-width: 1200px; text-align: center; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast span { color: var(--faint); }
+
+  /* ---------- screensaver: photo, fixed clock, a verse on frosted glass ---------- */
+  #saver { position: absolute; inset: 0; background: #000; z-index: 20; display: none; opacity: 0; transition: opacity 900ms ease; }
+  #saver.on { display: block; }
+  #saver.in { opacity: 1; }
+  #saver .sbg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 2200ms ease; }
+  #saver .sbg.on { opacity: 1; }
+  #saver .sshade { position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 70% at 50% 45%, rgba(0,0,0,.05) 0%, rgba(0,0,0,.45) 100%),
+                linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%); }
+  #sclock { position: absolute; left: 96px; bottom: 76px; text-shadow: 0 2px 24px rgba(0,0,0,.5); }
+  #sclock .t { font-size: 112px; font-weight: 200; letter-spacing: -.02em; line-height: 1; }
+  #sclock .d { font-size: 20px; letter-spacing: .3em; text-transform: uppercase; color: var(--dim); margin-top: 12px; }
+  #vcard { position: absolute; left: 50%; top: 46%; width: 1080px; margin-left: -540px; transform: translateY(-50%);
+    border-radius: 40px; overflow: hidden; border: 1px solid rgba(255,255,255,.24);
+    box-shadow: 0 40px 120px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3); }
+  #vcard .vglass { position: absolute; width: 1920px; height: 1080px; background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 2200ms ease; }
+  #vcard .vglass.on { opacity: 1; }
+  /* Darker smoked glass so the verse stays readable on bright photos; a faint sheen keeps it glassy. */
+  #vcard .vtint { position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,0) 45%), rgba(12,12,16,.55); }
+  #vcard .vbody { position: relative; padding: 52px 68px 46px; }
+  #vcard .vmood { display: inline-block; font-size: 15px; font-weight: 600; letter-spacing: .26em; text-transform: uppercase;
+    padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); }
+  #vcard .vtext { font-size: 44px; font-weight: 300; line-height: 1.38; letter-spacing: -.005em; margin-top: 26px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.45), 0 2px 18px rgba(0,0,0,.4); }
+  #vcard .vtext span { display: inline-block; opacity: 0; transform: translateY(14px);
+    transition: opacity 700ms ease, transform 900ms var(--ease); }
+  #vcard.show .vtext span { opacity: 1; transform: none; }
+  #vcard .vref { margin-top: 26px; font-size: 20px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.8);
+    opacity: 0; transition: opacity 800ms ease 600ms; }
+  #vcard.show .vref { opacity: 1; }
+  #vcard.out .vtext span, #vcard.out .vref { opacity: 0; transition: opacity 500ms ease; transform: none; }
+  #vcard .vbar { position: absolute; left: 68px; right: 68px; bottom: 22px; height: 2px; background: rgba(255,255,255,.15); border-radius: 1px; overflow: hidden; }
+  #vcard .vbar i { display: block; height: 100%; background: rgba(255,255,255,.75); transform-origin: 0 50%; transform: scaleX(0); }
+
+  /* Our loading screen: shown on the very first frame, fades into the home screen. */
+  #boot { position: fixed; inset: 0; z-index: 50; background: radial-gradient(ellipse 70% 60% at 50% 45%, #1b2233 0%, #07080c 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 380ms ease; }
+  #boot.done { opacity: 0; pointer-events: none; }
+  #boot .ring { width: 74px; height: 74px; border-radius: 50%; border: 3px solid rgba(255,255,255,.12); border-top-color: #fff;
+    animation: spin 900ms linear infinite; }
+  #boot .who { margin-top: 30px; font-size: 3.4vh; font-weight: 300; letter-spacing: .02em; color: #fff; }
+  #boot .sub { margin-top: 10px; font-size: 1.6vh; letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Our volume display: a glass bar at the top centre, clear of VIDAA's own bar. */
+  #vol { position: absolute; left: 50%; top: 40px; width: 520px; height: 72px; margin-left: -260px; border-radius: 36px; z-index: 30;
+    background: rgba(24,24,28,.9); border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    display: flex; flex-direction: row-reverse; align-items: center; padding: 0 28px; gap: 18px;
+    opacity: 0; transform: translateY(-24px); transition: opacity 180ms ease, transform 240ms var(--ease); }
+  #vol.show { opacity: 1; transform: none; }
+  #vol .num { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; width: 40px; text-align: right; }
+  #vol .track { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,.16); position: relative; overflow: hidden; }
+  #vol .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #fff; border-radius: 5px; transition: width 160ms ease; }
+  #vol svg { width: 30px; height: 30px; }
+  #vol.muted .fill { background: rgba(255,255,255,.35); }
+
+  #offline { position: absolute; left: 88px; bottom: 12px; z-index: 5; font-size: 15px; color: #ff9f0a; display: none; }
+</style>
+</head>
+<body>
+<div id="boot"><div class="ring"></div><div class="who" id="bootWho">Welcome home</div><div class="sub">Living room</div></div>
+<script>try { var _h = new Date().getHours(), _p = _h >= 5 && _h < 12 ? "morning" : _h < 18 && _h >= 12 ? "afternoon" : "night";
+  document.getElementById("bootWho").textContent = "Good " + _p + (window.__BOOT && __BOOT.household ? ", " + __BOOT.household : ""); } catch (e) {}</script>
+<div id="stage">
+  <div class="bg" id="bgA"></div>
+  <div class="bg" id="bgB"></div>
+  <div class="tint" id="tint"></div>
+  <div class="scrim"></div>
+
+  <header>
+    <div>
+      <div class="greet" id="greet">Good evening</div>
+      <div class="timeRow">
+        <span class="time" id="time">9:41</span><span class="ampm" id="ampm">PM</span>
+        <span class="sep"></span><span class="date" id="date"></span>
+      </div>
+    </div>
+    <div class="pills" id="pills"></div>
+  </header>
+
+  <div class="hero">
+    <div class="heroTitle" id="heroTitle">&nbsp;</div>
+    <div class="heroSub" id="heroSub">&nbsp;</div>
+  </div>
+
+  <div class="sheet"><div class="glass" id="glassA"></div><div class="glass" id="glassB"></div><div class="shade"></div><div id="column"></div></div>
+  <div class="credit" id="credit"></div>
+
+  <div class="panel wide" id="inputsPanel"><h3>Inputs</h3><div class="list" id="inputsList"></div></div>
+  <div class="panel wide" id="settingsPanel"><h3>Settings</h3><div class="list" id="settingsList"></div></div>
+  <div class="panel" id="wifiPanel"><h3>Wi-Fi</h3><div class="list" id="wifiList"></div></div>
+  <div id="vol"><div class="num" id="volNum">0</div><div class="track"><div class="fill" id="volFill"></div></div><span id="volIcon"></span></div>
+  <div id="toast"></div>
+  <div id="offline">Can't reach the Mac bridge. Is it running?</div>
+  <div id="saver">
+    <div class="sbg" id="sbgA"></div><div class="sbg" id="sbgB"></div><div class="sshade"></div>
+    <div id="vcard"><div class="vglass" id="vgA"></div><div class="vglass" id="vgB"></div><div class="vtint"></div>
+      <div class="vbody"><span class="vmood" id="vmood"></span><div class="vtext" id="vtext"></div><div class="vref" id="vref"></div></div>
+      <div class="vbar"><i id="vbar"></i></div></div>
+    <div id="sclock"><div class="t" id="saverTime"></div><div class="d" id="saverDate"></div></div>
+  </div>
+</div>
+
+<script>
+var ICONS = {
+  inputs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.8 15.8a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  speaker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>',
+};
+
+var S = {};
+var rows = [];
+var pos = { row: 1, col: 0 };   // start on Quick access
+var mode = "rows";
+var pillIdx = 0, inputIdx = 0;
+var sig = "";
+var stage = document.getElementById("stage");
+var column = document.getElementById("column");
+
+function fit() {
+  var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stage.style.transform = "scale(" + s + ")";
+}
+window.addEventListener("resize", fit); fit();
+
+/* ---------- clock + greeting ---------- */
+var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function tick() {
+  var d = new Date(), h = d.getHours(), m = d.getMinutes();
+  var hh = (h % 12) || 12, mm = (m < 10 ? "0" : "") + m;
+  document.getElementById("time").textContent = hh + ":" + mm;
+  document.getElementById("ampm").textContent = h < 12 ? "AM" : "PM";
+  var ds = DAYS[d.getDay()] + "  " + d.getDate() + " " + MONTHS[d.getMonth()];
+  document.getElementById("date").textContent = ds;
+  var part = h >= 5 && h < 12 ? "morning" : h >= 12 && h < 18 ? "afternoon" : "night";
+  document.getElementById("greet").textContent = "Good " + part + (S.household ? ", " + S.household : "");
+  document.getElementById("saverTime").textContent = hh + ":" + mm;
+  document.getElementById("saverDate").textContent = ds;
+}
+setInterval(tick, 10000); tick();
+
+/* ---------- carousel ---------- */
+var photoIdx = -1, bgFlip = false;
+function nextPhoto() {
+  var photos = S.photos || [];
+  if (!photos.length) return;
+  photoIdx = (photoIdx + 1) % photos.length;
+  var p = photos[photoIdx];
+  var img = new Image();
+  img.onload = function () {   // swap only once decoded, so the fade never shows a half-loaded photo
+    bgFlip = !bgFlip;
+    var on = document.getElementById(bgFlip ? "bgA" : "bgB"), off = document.getElementById(bgFlip ? "bgB" : "bgA");
+    on.style.backgroundImage = "url(" + p.src + ")";
+    on.className = "bg on"; off.className = "bg";
+    var gOn = document.getElementById(bgFlip ? "glassA" : "glassB"), gOff = document.getElementById(bgFlip ? "glassB" : "glassA");
+    gOn.style.backgroundImage = "url(" + (p.blur || p.src) + ")";
+    gOn.className = "glass on"; gOff.className = "glass";
+
+    document.getElementById("credit").textContent = "Photo · " + p.author + " / Unsplash";
+    var n = photos[(photoIdx + 1) % photos.length]; (new Image()).src = n.src;  // warm the next one
+  };
+  img.src = p.src;
+}
+setInterval(nextPhoto, 15000);
+
+/* ---------- bridge ---------- */
+function api(path, body) {
+  var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  return fetch("/api/" + path, opt).then(function (r) { return r.json(); });
+}
+function toast(html) {
+  var t = document.getElementById("toast");
+  t.innerHTML = html; t.className = "show";
+  clearTimeout(t._h); t._h = setTimeout(function () { t.className = ""; }, 2600);
+}
+var lastTint = "";
+function setTint(color) {
+  if (!color || color === lastTint) return;
+  lastTint = color;
+  var t = document.getElementById("tint");
+  t.style.background = "radial-gradient(ellipse 60% 55% at 22% 40%, " + color + " 0%, rgba(0,0,0,0) 70%)";
+  t.className = "tint on";
+}
+
+/* ---------- building rows ---------- */
+function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+function appByName(name) { var a = S.apps || []; for (var i = 0; i < a.length; i++) if (a[i].name === name) return a[i]; return null; }
+function shortName(n) { var t = String(n).replace(/\s*:.*$/, "").replace("▶", "").trim(); return t === "TV Channels" ? "Live TV" : t; }
+function fmt(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n); }
+
+/* ---------- WiFi + internet ---------- */
+var online = null;   // null until the first check
+function checkInternet() {
+  var done = false;
+  var timer = setTimeout(function () { if (!done) { done = true; setOnline(false); } }, 6000);
+  fetch("https://www.gstatic.com/generate_204?t=" + Date.now(), { mode: "no-cors", cache: "no-store" })
+    .then(function () { if (!done) { done = true; clearTimeout(timer); setOnline(true); } })
+    .catch(function () { if (!done) { done = true; clearTimeout(timer); setOnline(false); } });
+}
+function setOnline(v) { online = v; if (rows[0]) { rows[0].els[1].innerHTML = pillHTML("wifi"); if (mode === "pills") layout(); } }
+setInterval(checkInternet, 30000); checkInternet();
+
+function wifiText() {
+  var ssid = (S.wifi || {}).ssid;
+  if (online === false) return { dot: "warn", label: (ssid || "Wi-Fi") + " · No internet",
+    sub: "Connected to " + (ssid || "Wi-Fi") + ", but the internet isn't reachable" };
+  return { dot: online ? "" : "warn", label: ssid || "Wi-Fi",
+    sub: online ? "Connected to <b>" + escapeHTML(ssid || "Wi-Fi") + "</b> · Internet OK" : "Checking the connection…" };
+}
+
+function pillHTML(id) {
+  if (id === "inputs") return ICONS.inputs + "Inputs";
+  if (id === "settings") return ICONS.gear + "Settings";
+  var w = wifiText();
+  return '<span class="dot ' + w.dot + '"></span>' + ICONS.wifi + escapeHTML(w.label);
+}
+
+function build() {
+  column.innerHTML = "";
+  rows = [];
+  var pills = document.getElementById("pills"); pills.innerHTML = "";
+  var pillDefs = [{ id: "inputs" }, { id: "wifi" }, { id: "settings" }];
+  pillDefs.forEach(function (p) { var b = el("div", "pill", pillHTML(p.id)); pills.appendChild(b); });
+  rows.push({ id: "pills", els: [].slice.call(pills.children), data: pillDefs });
+
+  var dock = S.dock || [];
+  addRow("Quick access", dock.map(appByName).filter(Boolean).map(function (a) {
+    var t = el("div", "tile quick", tileHTML(a.name, true) + '<div class="name">' + escapeHTML(shortName(a.name)) + '</div>');
+    return { el: t, item: { type: "app", app: a, title: shortName(a.name), sub: "Press OK to open", glow: brandFor(a.name).glow } };
+  }));
+
+  addRow("Recent sites", (S.sites || []).map(function (s) {
+    var host = s.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/.*$/, "");
+    var t = el("div", "tile site", '<div class="art" style="background:' + s.bg + '">' +
+      '<img class="' + s.fit + '" data-src="' + s.icon + '" alt="">' + (s.fit === "cover" ? '<div class="shade"></div><span class="siteName">' + escapeHTML(s.name) + '</span>' : "") +
+      '<span class="url">' + escapeHTML(host) + '</span></div><div class="name">' + escapeHTML(s.name) + '</div>');
+    return { el: t, item: { type: "site", site: s, title: s.name, sub: escapeHTML(s.sub || host), glow: s.glow } };
+  }));
+
+  var hidden = S.hidden || [];
+  var rest = (S.apps || []).filter(function (a) { return dock.indexOf(a.name) < 0 && hidden.indexOf(a.name) < 0; });
+  function appRow(i) {
+    addRow(i === 0 ? "All apps" : "", rest.slice(i, i + 7).map(function (a) {
+      var t = el("div", "tile app", tileHTML(a.name, false) + '<div class="name">' + escapeHTML(shortName(a.name)) + '</div>');
+      return { el: t, item: { type: "app", app: a, title: shortName(a.name), sub: "Press OK to open", glow: brandFor(a.name).glow } };
+    }));
+  }
+  // Rows on screen first; the ones below the fold right after the first frame.
+  appRow(0);
+  setTimeout(function () { for (var i = 7; i < rest.length; i += 7) appRow(i); showArt(); }, 0);
+  showArt();
+  pos.row = Math.min(Math.max(pos.row, 1), rows.length - 1);
+  layout();
+  if (!build._drawn) { build._drawn = true; requestAnimationFrame(function () { requestAnimationFrame(hideBoot); }); }
+}
+
+function addRow(label, entries) {
+  if (!entries.length) return;
+  var row = el("div", "row");
+  if (label) row.appendChild(el("div", "rowLabel", escapeHTML(label)));
+  var items = el("div", "items");
+  entries.forEach(function (e) { items.appendChild(e.el); });
+  row.appendChild(items);
+  column.appendChild(row);
+  rows.push({ rowEl: row, els: entries.map(function (e) { return e.el; }), data: entries.map(function (e) { return e.item; }) });
+}
+
+/* ---------- focus + layout ---------- */
+var focused = null;
+function layout() {
+  if (focused) focused.classList.remove("focus");
+  if (mode === "pills") {
+    focused = rows[0].els[pillIdx]; focused.classList.add("focus");
+    var id = rows[0].data[pillIdx].id;
+    setHero(id === "inputs" ? "Inputs" : id === "settings" ? "Settings" : "Wi-Fi",
+      id === "wifi" ? wifiText().sub + " · OK to see networks"
+        : id === "inputs" ? "HDMI, AV and live TV" : "Wi-Fi, volume, picture, home screen and ad blocker");
+    return;
+  }
+  var r = rows[pos.row]; if (!r) return;
+  pos.col = Math.min(pos.col, r.els.length - 1);
+  focused = r.els[pos.col]; focused.classList.add("focus");
+  var item = r.data[pos.col];
+  setHero(item.title, item.sub);
+  setTint(item.glow);
+  column.style.transform = "translateY(" + (-r.rowEl.offsetTop) + "px)";
+  for (var i = 1; i < rows.length; i++) rows[i].rowEl.className = "row" + (i < pos.row ? " gone" : "");
+}
+function setHero(t, s) {
+  document.getElementById("heroTitle").textContent = t || " ";
+  document.getElementById("heroSub").innerHTML = s || "&nbsp;";
+}
+
+/* ---------- actions ---------- */
+function activate() {
+  if (mode === "pills") {
+    var id = rows[0].data[pillIdx].id;
+    if (id === "inputs") return openInputs();
+    if (id === "settings") return openSettings();
+    if (id === "wifi") { wifiFrom = ""; return openWifi(); }
+    return;
+  }
+  var item = rows[pos.row].data[pos.col];
+  if (item.type === "app") { toast("Opening " + escapeHTML(item.title)); api("launch", item.app); }
+  else if (item.type === "site") {
+    toast("Opening " + escapeHTML(item.title) + ' <span>· ' + escapeHTML(item.site.url.replace(/^https?:\/\//, "")) + "</span>");
+    api("launch", { appId: "site-" + item.title, name: item.title, url: item.site.url });
+  }
+}
+function openInputs() {
+  mode = "inputs"; inputIdx = 0;
+  var list = document.getElementById("inputsList"); list.innerHTML = "";
+  var cur = S.state && S.state.sourcename;
+  (S.sources || []).forEach(function (s) {
+    var on = s.sourcename === cur;
+    list.appendChild(el("div", "wrow", (on ? ICONS.check : ICONS.inputs) + '<span class="nm">' + escapeHTML(s.displayname || s.sourcename) + '</span>' +
+      (on ? '<span class="meta">Current</span>' : "")));
+  });
+  document.getElementById("inputsPanel").className = "panel wide open";
+  drawInputs();
+}
+function drawInputs() {
+  [].forEach.call(document.getElementById("inputsList").children, function (o, i) { o.classList.toggle("focus", i === inputIdx); });
+}
+/* ---------- Wi-Fi dropdown ---------- */
+var wifiItems = [], wifiIdx = 0, wifiQuery = "";
+function squash(t) { return String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, ""); }  // "mtn 5" finds "MTN-5G"
+function tvIP() { try { return window.Hisense_GetIPAddress ? Hisense_GetIPAddress() : ""; } catch (e) { return ""; } }
+function openWifi() {
+  mode = "wifi"; wifiIdx = 0; wifiQuery = "";
+  document.getElementById("wifiPanel").className = "panel open";
+  drawWifi();
+}
+function wifiRow(n, cls) {
+  var meta = [n.band, n.security && n.security !== "None" ? "" : "Open"].filter(Boolean).join(" · ");
+  return el("div", "wrow" + (cls ? " " + cls : ""),
+    ICONS.wifi + '<span class="nm">' + escapeHTML(n.ssid) + '</span><span class="meta">' + escapeHTML(meta) + '</span>' +
+    (n.security && n.security !== "None" ? ICONS.lock : ""));
+}
+function drawWifi() {
+  var w = S.wifi || {}, list = document.getElementById("wifiList"), q = squash(wifiQuery);
+  list.innerHTML = ""; wifiItems = [];
+  function add(node, item) { list.appendChild(node); if (item) { item.el = node; wifiItems.push(item); } }
+
+  var cur = el("div", "wrow current", ICONS.check + '<span class="nm">' + escapeHTML(w.ssid || "Wi-Fi") +
+    '<span class="sub">' + (online === false ? "Connected · no internet" : "Connected") + (tvIP() ? " · " + escapeHTML(tvIP()) : "") + '</span></span>');
+  add(cur, { type: "current" });
+
+  var sr = el("div", "wsearch", ICONS.search + '<input id="wifiSearch" placeholder="Search networks" value="' + escapeHTML(wifiQuery) + '">');
+  add(sr, { type: "search" });
+  var input = sr.querySelector("input");
+  input.addEventListener("input", function () { wifiQuery = input.value; drawWifiKeepSearch(); });
+
+  var nearby = (w.nearby || []).filter(function (n) { return n.ssid !== w.ssid && (!q || squash(n.ssid).indexOf(q) >= 0); });
+  var known = nearby.filter(function (n) { return n.known; }), other = nearby.filter(function (n) { return !n.known; });
+  if (known.length) { add(el("div", "wgroup", "Known networks")); known.forEach(function (n) { add(wifiRow(n), { type: "net", net: n }); }); }
+  add(el("div", "wgroup", q ? "Matching networks" : "Other networks"));
+  if (other.length) other.forEach(function (n) { add(wifiRow(n), { type: "net", net: n }); });
+  else add(el("div", "wempty", q ? "No networks match “" + escapeHTML(wifiQuery) + "”" : "Scanning…"));
+  add(el("div", "wgroup", "TV"));
+  add(el("div", "wrow", ICONS.gear + '<span class="nm">All TV settings</span>'), { type: "settings" });
+
+  wifiIdx = Math.min(wifiIdx, wifiItems.length - 1);
+  markWifi();
+}
+function drawWifiKeepSearch() {
+  drawWifi();
+  var i = document.getElementById("wifiSearch"); i.focus(); i.setSelectionRange(i.value.length, i.value.length);
+}
+function markWifi() {
+  wifiItems.forEach(function (it, i) { it.el.classList.toggle("focus", i === wifiIdx); });
+  var list = document.getElementById("wifiList"), f = wifiItems[wifiIdx].el;
+  // keep the focused row visible without smooth scrolling (cheaper on the TV)
+  if (f.offsetTop + f.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = f.offsetTop + f.offsetHeight - list.clientHeight;
+  if (f.offsetTop < list.scrollTop) list.scrollTop = f.offsetTop - 30;
+}
+function wifiOK() {
+  var it = wifiItems[wifiIdx];
+  if (it.type === "search") { document.getElementById("wifiSearch").focus(); return; }   // TV keyboard pops up
+  if (it.type === "settings") { closeWifi(); return api("key", { key: "KEY_MENU" }); }
+  if (it.type === "net") {
+    toast("Join <b>" + escapeHTML(it.net.ssid) + "</b> in the TV's network settings <span>· opening them now</span>");
+    closeWifi();
+    setTimeout(function () { api("key", { key: "KEY_MENU" }); }, 1200);
+  }
+}
+function closeWifi() {
+  var i = document.getElementById("wifiSearch"); if (i) i.blur();
+  document.getElementById("wifiPanel").className = "panel";
+  if (wifiFrom === "settings") { wifiFrom = ""; return openSettings(true); }
+  mode = "pills"; layout();
+}
+
+function closeInputs() {
+  document.getElementById("inputsPanel").className = "panel wide";
+  if (inputsFrom === "settings") { inputsFrom = ""; return openSettings(true); }
+  mode = "pills"; layout();
+}
+
+/* ---------- Settings menu (ours, not VIDAA's) ---------- */
+var setItems = [], setIdx = 0, wifiFrom = "", inputsFrom = "";
+function tvParam(k) { try { var v = window.TvInfo_getParam ? TvInfo_getParam(k) : null; return v == null ? null : Number(v); } catch (e) { return null; } }
+function settingsModel() {
+  var w = S.wifi || {}, ab = S.adblock || {}, cur = S.state && (S.state.displayname || S.state.sourcename);
+  var items = [
+    { type: "nav", label: "Wi-Fi", icon: "wifi", value: w.ssid || "", go: function () { wifiFrom = "settings"; openWifi(); } },
+    { type: "slider", label: "Volume", get: function () { return S.volume == null ? 0 : S.volume; }, step: 2,
+      set: function (v) { S.volume = v; api("volume", { value: v }); } }
+  ];
+  var b = tvParam("brightness");
+  if (b !== null && !isNaN(b)) items.push({ type: "slider", label: "Brightness", step: 5,
+    get: function () { return tvParam("brightness") || 0; },
+    set: function (v) { try { vowOS.tvinfo.setBrightness(v); } catch (e) {} } });
+  var c = tvParam("contrast");
+  if (c !== null && !isNaN(c)) items.push({ type: "slider", label: "Contrast", step: 5,
+    get: function () { return tvParam("contrast") || 0; },
+    set: function (v) { try { vowOS.tvinfo.setContrast(v); } catch (e) {} } });
+  items.push(
+    { type: "nav", label: "Inputs", icon: "inputs", value: cur || "", go: function () { inputsFrom = "settings"; openInputs(); } },
+    { type: "toggle", label: "Always use my home screen", get: function () { return S.own_home !== false; },
+      set: function (on) { S.own_home = on; api("config", { own_home: on }); } },
+    { type: "toggle", label: "Ad blocker", get: function () { return !!(ab.running && ab.enabled); },
+      set: function (on) { (S.adblock || {}).enabled = on; api("adblock", { enabled: on }); } },
+    { type: "action", label: "All TV settings", icon: "gear", run: function () { closeSettings(); api("key", { key: "KEY_MENU" }); } }
+  );
+  return items;
+}
+function openSettings(keepIdx) {
+  mode = "settings"; if (!keepIdx) setIdx = 0;
+  document.getElementById("settingsPanel").className = "panel wide open";
+  drawSettings();
+}
+function drawSettings() {
+  var list = document.getElementById("settingsList"); list.innerHTML = "";
+  setItems = settingsModel();
+  setItems.forEach(function (it) {
+    var right = "";
+    if (it.type === "nav") right = '<span class="val">' + escapeHTML(it.value) + '<span class="chev">›</span></span>';
+    if (it.type === "slider") { var v = it.get(); right = '<span class="val"><span class="bar"><i style="width:' + v + '%"></i></span><span class="num">' + v + '</span></span>'; }
+    if (it.type === "toggle") right = '<span class="val"><span class="toggle' + (it.get() ? " on" : "") + '"></span></span>';
+    var ico = it.icon ? ICONS[it.icon] : "";
+    it.el = el("div", "wrow", ico + '<span class="nm">' + escapeHTML(it.label) + '</span>' + right);
+    list.appendChild(it.el);
+  });
+  setIdx = Math.min(setIdx, setItems.length - 1);
+  setItems.forEach(function (it, i) { it.el.classList.toggle("focus", i === setIdx); });
+}
+function settingsKey(k) {
+  var it = setItems[setIdx];
+  if (k === 38) setIdx = Math.max(0, setIdx - 1);
+  else if (k === 40) setIdx = Math.min(setItems.length - 1, setIdx + 1);
+  else if ((k === 37 || k === 39) && it.type === "slider") {
+    var v = Math.max(0, Math.min(100, it.get() + (k === 39 ? it.step : -it.step))); it.set(v);
+  }
+  else if (k === 37 || k === 39) { switchPill(k === 39 ? 1 : -1); return; }
+  else if (k === 13) {
+    if (it.type === "nav") { closePanels(); it.go(); return; }
+    if (it.type === "toggle") it.set(!it.get());
+    if (it.type === "action") { it.run(); return; }
+  }
+  else if (BACK.indexOf(k) >= 0) { closeSettings(); return; }
+  drawSettings();
+}
+function closeSettings() { document.getElementById("settingsPanel").className = "panel wide"; mode = "pills"; layout(); }
+function closePanels() {
+  ["settingsPanel", "wifiPanel", "inputsPanel"].forEach(function (id) {
+    var p = document.getElementById(id); p.className = p.className.replace(" open", "");
+  });
+  var i = document.getElementById("wifiSearch"); if (i) i.blur();
+}
+/* Left/right always moves between the pills, wrapping around; any open menu closes. */
+function switchPill(dir) {
+  var menuOpen = mode === "settings" || mode === "wifi" || mode === "inputs";
+  closePanels(); wifiFrom = inputsFrom = "";
+  var n = rows[0].els.length;
+  pillIdx = (pillIdx + dir + n) % n; mode = "pills"; layout();
+  if (menuOpen) activate();   // a menu was open, so open this pill's menu too
+}
+
+/* ---------- volume display ---------- */
+var VOL_UP = window.VK_VOLUME_UP || 447, VOL_DOWN = window.VK_VOLUME_DOWN || 448, VOL_MUTE = window.VK_MUTE || 449;
+var volHideT, volMuted = false, lastVol = null;
+function showVol(v, muted) {
+  var box = document.getElementById("vol");
+  v = Math.max(0, Math.min(100, v | 0));
+  document.getElementById("volNum").textContent = muted ? "" : v;
+  document.getElementById("volFill").style.width = (muted ? 0 : v) + "%";
+  document.getElementById("volIcon").innerHTML = muted || v === 0 ? ICONS.mute : ICONS.speaker;
+  box.className = "show" + (muted ? " muted" : "");
+  clearTimeout(volHideT); volHideT = setTimeout(function () { box.className = muted ? "muted" : ""; }, 2200);
+}
+function followVolume() {   // ask the bridge quickly for the real level for a moment after a press
+  var n = 0;
+  (function poll() {
+    api("status").then(function (s) {
+      if (s.volume != null) { S.volume = s.volume; lastVol = s.volume; showVol(s.volume, volMuted); }
+    }).catch(function () {});
+    if (++n < 6) setTimeout(poll, 250);
+  })();
+}
+function volumeKey(k) {
+  if (k === VOL_MUTE) volMuted = !volMuted;
+  else volMuted = false;
+  var guess = (S.volume || 0) + (k === VOL_UP ? 1 : k === VOL_DOWN ? -1 : 0);
+  showVol(guess, volMuted);
+  followVolume();
+}
+setTimeout(function () { hideBoot(); }, 4000);   // never leave the loading screen up
+/* The TV keeps volume presses to itself, so the bridge tells us about each change the moment it happens. */
+function volLoop(seq) {
+  fetch("/api/volwait?seq=" + seq, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+    if (seq !== -1 && d.seq !== seq && d.volume != null) showVol(d.volume, false);
+    if (d.volume != null) { S.volume = d.volume; lastVol = d.volume; }
+    volLoop(d.seq);
+  }).catch(function () { setTimeout(function () { volLoop(seq); }, 2000); });
+}
+volLoop(-1);
+function hideBoot() {
+  var b = document.getElementById("boot");
+  if (!b || b.className === "done") return;
+  b.className = "done"; setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 450);
+}
+
+/* ---------- keys ---------- */
+var BACK = [8, 27, 461, 10009, 166];
+document.addEventListener("keydown", function (e) {
+  var k = e.keyCode;
+  if (k === VOL_UP || k === VOL_DOWN || k === VOL_MUTE) { volumeKey(k); return; }
+  var wasAsleep = wake();
+  var inField = document.activeElement && document.activeElement.tagName === "INPUT";
+  if (!inField && ([37, 38, 39, 40, 13].indexOf(k) >= 0 || BACK.indexOf(k) >= 0)) e.preventDefault();
+  if (wasAsleep) return;
+  if (mode === "wifi") {
+    var typing = document.activeElement && document.activeElement.id === "wifiSearch";
+    if (typing && [37, 39].indexOf(k) >= 0) return;                // move the caret
+    if (typing && k === 8) return;                                  // delete a letter
+    if (typing) { document.activeElement.blur(); }
+    if (k === 38) wifiIdx = Math.max(0, wifiIdx - 1);
+    else if (k === 40) wifiIdx = Math.min(wifiItems.length - 1, wifiIdx + 1);
+    else if (k === 13 && !typing) { wifiOK(); return; }
+    else if (k === 37 || k === 39) { switchPill(k === 39 ? 1 : -1); return; }
+    else if (BACK.indexOf(k) >= 0) { closeWifi(); return; }
+    markWifi(); return;
+  }
+  if (mode === "settings") { settingsKey(k); return; }
+  if (mode === "inputs") {
+    var n = (S.sources || []).length;
+    if (k === 38) inputIdx = Math.max(0, inputIdx - 1);
+    else if (k === 40) inputIdx = Math.min(n - 1, inputIdx + 1);
+    else if (k === 13) {
+      var s = S.sources[inputIdx];
+      toast("Switching to " + escapeHTML(s.displayname || s.sourcename));
+      api("source", { sourceid: s.sourceid, sourcename: s.sourcename });
+      inputsFrom = ""; closeInputs(); return;
+    } else if (k === 37 || k === 39) { switchPill(k === 39 ? 1 : -1); return; }
+    else if (BACK.indexOf(k) >= 0) { closeInputs(); return; }
+    drawInputs(); return;
+  }
+  if (mode === "pills") {
+    if (k === 37 || k === 39) { switchPill(k === 39 ? 1 : -1); return; }
+    else if (k === 40 || BACK.indexOf(k) >= 0) mode = "rows";
+    else if (k === 13) { activate(); return; }
+    layout(); return;
+  }
+  var r = rows[pos.row];
+  if (k === 37) pos.col = Math.max(0, pos.col - 1);
+  else if (k === 39) pos.col = Math.min(r.els.length - 1, pos.col + 1);
+  else if (k === 38) {
+    if (pos.row <= 1) mode = "pills";
+    else { var x = centerX(); pos.row--; pos.col = nearest(x); }
+  }
+  else if (k === 40 && pos.row < rows.length - 1) { var cx = centerX(); pos.row++; pos.col = nearest(cx); }
+  else if (k === 13) { activate(); return; }
+  else if (BACK.indexOf(k) >= 0) { pos.row = 1; pos.col = 0; }
+  layout();
+});
+function centerX() { var t = rows[pos.row].els[pos.col]; return t.offsetLeft + t.offsetWidth / 2; }
+function nearest(x) {
+  var best = 0, bd = 1e9;
+  rows[pos.row].els.forEach(function (t, i) { var d = Math.abs(t.offsetLeft + t.offsetWidth / 2 - x); if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+
+/* ---------- screensaver ---------- */
+var idleT;
+function wake() {
+  var sv = document.getElementById("saver"), was = sv.className === "on";
+  if (was || sv.className.indexOf("on") >= 0) { was = true; sv.className = ""; clearInterval(sleep._i); }
+  clearTimeout(idleT); idleT = setTimeout(sleep, 5 * 60 * 1000);
+  return was;
+}
+var VERSES = null, VERSE_MS = 25000, verseI = 0, sFlip = false, sPhoto = 0;
+fetch("/tv/verses.json").then(function (r) { return r.json(); }).then(function (v) { VERSES = v; }).catch(function () {});
+function moodNow() {
+  var m = S.mood || "auto";
+  if (m === "auto" && VERSES) {
+    var h = new Date().getHours();
+    m = VERSES.auto[h >= 5 && h < 12 ? "morning" : h >= 12 && h < 18 ? "afternoon" : "night"];
+  }
+  return m;
+}
+function sleep() {
+  var sv = document.getElementById("saver");
+  sv.className = "on"; setTimeout(function () { if (sv.className === "on") sv.className = "on in"; }, 30);
+  verseI = Math.floor(Math.random() * 5);
+  nextVerse(true);
+  clearInterval(sleep._i); sleep._i = setInterval(nextVerse, VERSE_MS);
+}
+function nextVerse(first) {
+  var card = document.getElementById("vcard");
+  if (!VERSES) { card.style.display = "none"; return; }
+  card.style.display = "";
+  var mood = VERSES.moods[moodNow()] || VERSES.moods.peaceful, list = mood.verses, v = list[verseI++ % list.length];
+  card.className = first ? "" : "out";
+  setTimeout(function () {
+    // new photo behind, and the same photo pre-blurred inside the glass, lined up with the card
+    var photos = S.photos || [];
+    if (photos.length) {
+      var p = photos[sPhoto++ % photos.length]; sFlip = !sFlip;
+      var a = document.getElementById(sFlip ? "sbgA" : "sbgB"), b = document.getElementById(sFlip ? "sbgB" : "sbgA");
+      a.style.backgroundImage = "url(" + p.src + ")"; a.className = "sbg on"; b.className = "sbg";
+      var ga = document.getElementById(sFlip ? "vgA" : "vgB"), gb = document.getElementById(sFlip ? "vgB" : "vgA");
+      ga.style.backgroundImage = "url(" + (p.blur || p.src) + ")"; ga.className = "vglass on"; gb.className = "vglass";
+    }
+    document.getElementById("vmood").textContent = mood.label;
+    document.getElementById("vref").textContent = v.ref;
+    var words = v.text.split(" ");
+    document.getElementById("vtext").innerHTML = words.map(function (w, i) {
+      return '<span style="transition-delay:' + Math.min(i * 45, 1600) + 'ms">' + escapeHTML(w) + '</span>';
+    }).join(" ");
+    document.getElementById("vtext").style.fontSize = v.text.length > 150 ? "38px" : v.text.length < 70 ? "52px" : "44px";
+    // line the blurred photo up with where the card sits on screen
+    var gl = -card.offsetLeft, gt = -(card.offsetTop - card.offsetHeight / 2);
+    [].forEach.call(card.querySelectorAll(".vglass"), function (g) { g.style.left = gl + "px"; g.style.top = gt + "px"; });
+    card.offsetWidth;   // restart the word animation
+    card.className = "show";
+    var bar = document.getElementById("vbar");
+    bar.style.transition = "none"; bar.style.transform = "scaleX(0)"; bar.offsetWidth;
+    bar.style.transition = "transform " + (VERSE_MS - 700) + "ms linear"; bar.style.transform = "scaleX(1)";
+  }, first ? 0 : 600);
+}
+wake();
+
+/* ---------- polling ---------- */
+function refresh() {
+  return api("status").then(function (s) {
+    document.getElementById("offline").style.display = "none";
+    if (S.build && s.build && s.build !== S.build) { location.reload(); return; }  // new version on the Mac
+    if (s.volume != null && lastVol != null && s.volume !== lastVol) showVol(s.volume, false);
+    if (s.saver_req && S.saver_req && s.saver_req !== S.saver_req) setTimeout(sleep, 50);
+    if (s.volume != null) lastVol = s.volume;
+    var first = !S.photos;
+    S = s;
+    if (first) { if (pageLoaded) nextPhoto(); tick(); }
+    var next = JSON.stringify([s.apps && s.apps.map(function (a) { return a.name; }), s.dock, s.hidden, s.sites]);
+    if (next !== sig) { sig = next; build(); }
+    if (mode === "wifi" && !(document.activeElement && document.activeElement.id === "wifiSearch")) drawWifi();
+    if (mode === "settings") drawSettings();
+    else if (rows[0]) rows[0].els[1].innerHTML = pillHTML("wifi");
+  }).catch(function () { document.getElementById("offline").style.display = "block"; });
+}
+/* Logos and photos load after the page counts as loaded, so VIDAA's spinner goes away sooner. */
+var pageLoaded = document.readyState === "complete";
+function showArt() {
+  if (!pageLoaded) return;
+  [].forEach.call(document.querySelectorAll("img[data-src]"), function (im) {
+    im.onload = function () { im.className += " in"; };
+    im.onerror = function () {   // missing artwork: show the name instead
+      var row = im.parentNode, name = im.getAttribute("data-name");
+      if (name && row) row.innerHTML = '<span class="logoLabel" style="color:#fff">' + escapeHTML(name) + '</span>';
+    };
+    im.src = im.getAttribute("data-src"); im.removeAttribute("data-src");
+  });
+}
+window.addEventListener("load", function () {
+  pageLoaded = true; showArt(); nextPhoto();
+  api("ready", {}).catch(function () {});
+});
+// Draw straight away from the data the Mac built into the page, then keep it fresh.
+if (window.__BOOT) { S = window.__BOOT; sig = JSON.stringify([S.apps && S.apps.map(function (a) { return a.name; }), S.dock, S.hidden, S.sites]); build(); tick(); }
+refresh(); setInterval(refresh, 5000);
+</script>
+</body>
+</html>
