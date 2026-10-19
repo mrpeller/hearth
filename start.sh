@@ -21,7 +21,6 @@ if [ ! -x .venv/bin/python ] || ! has_tls13 .venv/bin/python; then
   elif [ -n "$UV" ]; then
     echo "Setting up with uv"
     "$UV" venv -q --python 3.12 .venv
-    "$UV" pip install -q --python .venv/bin/python pip
   else
     echo "Hearth needs a Python with TLS 1.3. Install one of:"
     echo "  uv:        https://docs.astral.sh/uv/  (then run ./start.sh again)"
@@ -34,6 +33,7 @@ fi
 sync_requirements() {
   local sum; sum="$(cksum requirements.txt | cut -d' ' -f1)"
   if [ "$(cat .venv/.requirements 2>/dev/null)" != "$sum" ]; then
+    .venv/bin/python -m pip --version >/dev/null 2>&1 || .venv/bin/python -m ensurepip >/dev/null
     .venv/bin/python -m pip install -q --disable-pip-version-check -r requirements.txt
     echo "$sum" > .venv/.requirements
   fi

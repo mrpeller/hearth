@@ -37,6 +37,8 @@ function Sync-Requirements {
     $sum = (Get-FileHash -Algorithm SHA256 "requirements.txt").Hash
     $marker = ".venv\.requirements"
     if (-not (Test-Path $marker) -or (Get-Content $marker -Raw).Trim() -ne $sum) {
+        & $venvPy -m pip --version 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { & $venvPy -m ensurepip | Out-Null }
         & $venvPy -m pip install -q --disable-pip-version-check -r requirements.txt
         Set-Content -Path $marker -Value $sum
     }
